@@ -1,0 +1,12 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro'
+import ContentForm from '../../components/content/ContentForm.astro'
+
+const error = Astro.url.searchParams.get('error')
+---
+
+<DashboardLayout title="Save Content - Smart Content Vault">
+  <div class="max-w-lg mx-auto pt-8">
+    <ContentForm error={error || undefined} />
+  </div>
+</DashboardLayout>

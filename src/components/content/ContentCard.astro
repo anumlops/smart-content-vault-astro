@@ -1,0 +1,75 @@
+---
+import { getDomain, getContentTypeColor, formatRelativeTime } from '../../lib/utils'
+import { CATEGORY_META } from '../../types'
+
+export interface Props {
+  id: string
+  url: string
+  title: string | null
+  description: string | null
+  thumbnailUrl: string | null
+  contentType: string
+  category: string | null
+  tags: { id: string; name: string; slug: string }[]
+  createdAt: string
+}
+
+const { id, url, title, description, thumbnailUrl, contentType, category, tags, createdAt } = Astro.props
+const domain = getDomain(url)
+const typeColor = getContentTypeColor(contentType)
+const catMeta = category ? CATEGORY_META[category] : null
+---
+
+<a
+  href={`/content/${id}`}
+  class="glass-card rounded-xl overflow-hidden transition-all duration-200 hover:bg-surface-elevated group"
+>
+  <div class="aspect-video bg-surface-muted relative overflow-hidden">
+    {thumbnailUrl ? (
+      <img src={thumbnailUrl} alt={title || 'Content thumbnail'} class="w-full h-full object-cover" loading="lazy" />
+    ) : (
+      <div class="w-full h-full flex items-center justify-center">
+        <svg class="w-10 h-10 text-text-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" />
+        </svg>
+      </div>
+    )}
+    <div class="absolute top-2 right-2">
+      <span class="badge text-xs bg-black/60 text-white backdrop-blur-sm border-0">
+        {contentType}
+      </span>
+    </div>
+  </div>
+  <div class="p-3 space-y-2">
+    <h3 class="text-sm font-medium text-white line-clamp-2 group-hover:text-primary transition-colors">
+      {title || domain}
+    </h3>
+    {description && (
+      <p class="text-xs text-text-muted line-clamp-2">{description}</p>
+    )}
+    <div class="flex items-center gap-2 text-xs text-text-muted">
+      <span class={typeColor}>{contentType}</span>
+      <span>·</span>
+      <span>{domain}</span>
+      <span>·</span>
+      <span>{formatRelativeTime(createdAt)}</span>
+    </div>
+    <div class="flex flex-wrap gap-1.5">
+      {category && (
+        <span class="badge text-[10px] bg-primary-muted text-primary border border-primary/20">
+          {catMeta?.emoji} {category}
+        </span>
+      )}
+      {tags.slice(0, 2).map((tag) => (
+        <span class="badge text-[10px] bg-surface-muted text-text-muted border border-border">
+          {tag.name}
+        </span>
+      ))}
+      {tags.length > 2 && (
+        <span class="badge text-[10px] bg-surface-muted text-text-dim">
+          +{tags.length - 2}
+        </span>
+      )}
+    </div>
+  </div>
+</a>

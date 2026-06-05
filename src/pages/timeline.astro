@@ -1,0 +1,93 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro'
+import { formatRelativeTime, getDomain, getContentTypeColor } from '../lib/utils'
+import { prisma } from '../lib/prisma'
+
+let groups: { date: string; items: any[] }[] = []
+
+try {
+  const content = await prisma.savedContent.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+    include: { tags: { include: { tag: true } } },
+  })
+
+  const grouped: Record<string, any[]> = {}
+  for (const item of content) {
+    const dateKey = item.createdAt.toISOString().split('T')[0]
+    if (!grouped[dateKey]) grouped[dateKey] = []
+    grouped[dateKey].push(item)
+  }
+
+  groups = Object.entries(grouped).map(([date, items]) => ({
+    date,
+    items: items.map(i => ({
+      id: i.id,
+      url: i.originalUrl,
+      title: i.title,
+      contentType: i.contentType,
+      category: i.category,
+      createdAt: i.createdAt.toISOString(),
+    })),
+  }))
+} catch {}
+---
+
+<DashboardLayout title="Timeline - Smart Content Vault">
+  <div class="max-w-3xl mx-auto space-y-8 pt-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-white">Timeline</h1>
+      <p class="text-sm text-text-muted mt-1">Chronological view of your saved content</p>
+    </div>
+
+    {groups.length > 0 ? (
+      groups.map((group) => (
+        <div>
+          <h2 class="text-sm font-medium text-text-muted mb-3 sticky top-14 bg-[hsl(230_12%_6%)] py-2 z-30">
+            {new Date(group.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+          </h2>
+          <div class="relative space-y-1">
+            {group.items.map((item, i) => {
+              const typeColor = getContentTypeColor(item.contentType)
+              return (
+                <a
+                  href={`/content/${item.id}`}
+                  class="flex items-center gap-4 p-3 rounded-lg hover:bg-surface-muted/50 transition-colors group"
+                >
+                  <div class={`w-2 h-2 rounded-full ${typeColor} shrink-0`}></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm text-white truncate group-hover:text-primary transition-colors">
+                      {item.title || getDomain(item.url)}
+                    </p>
+                    <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+                      <span>{formatRelativeTime(item.createdAt)}</span>
+                      <span>·</span>
+                      <span class={typeColor}>{item.contentType}</span>
+                      {item.category && (
+                        <>
+                          <span>·</span>
+                          <span>{item.category}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <svg class="w-4 h-4 text-text-dim group-hover:text-text-muted transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              )
+            })}
+          </div>
+        </div>
+      ))
+    ) : (
+      <div class="text-center py-20">
+        <svg class="w-12 h-12 mx-auto text-text-dim mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-text-muted">No content saved yet</p>
+        <p class="text-sm text-text-dim mt-1">Start by saving a link</p>
+      </div>
+    )}
+  </div>
+</DashboardLayout>

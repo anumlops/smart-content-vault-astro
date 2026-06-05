@@ -1,0 +1,75 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro'
+import SearchBar from '../components/search/SearchBar.astro'
+import SearchResults from '../components/search/SearchResults.astro'
+import { prisma } from '../lib/prisma'
+
+const query = Astro.url.searchParams.get('q') || ''
+const categoryFilter = Astro.url.searchParams.get('category') || ''
+
+let results: any[] = []
+let total = 0
+
+if (query || categoryFilter) {
+  try {
+    const where: any = {}
+
+    if (query) {
+      where.OR = [
+        { title: { contains: query, mode: 'insensitive' } },
+        { description: { contains: query, mode: 'insensitive' } },
+        { category: { contains: query, mode: 'insensitive' } },
+      ]
+    }
+
+    if (categoryFilter) {
+      where.category = categoryFilter
+    }
+
+    const contentResults = await prisma.savedContent.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      include: { tags: { include: { tag: true } } },
+    })
+
+    total = contentResults.length
+    results = contentResults.map(c => ({
+      id: c.id,
+      url: c.originalUrl,
+      title: c.title,
+      description: c.description,
+      thumbnailUrl: c.thumbnailUrl,
+      contentType: c.contentType,
+      category: c.category,
+      tags: c.tags.map(ct => ({ id: ct.tag.id, name: ct.tag.name, slug: ct.tag.slug })),
+      createdAt: c.createdAt.toISOString(),
+      score: 100,
+    }))
+  } catch {
+    // Search failed
+  }
+}
+---
+
+<DashboardLayout title="Search - Smart Content Vault">
+  <div class="max-w-5xl mx-auto space-y-6 pt-4">
+    <div>
+      <h1 class="text-2xl font-semibold text-white mb-1">Search</h1>
+      <p class="text-sm text-text-muted mb-4">Search your saved content</p>
+      <SearchBar query={query} />
+    </div>
+
+    {query || categoryFilter ? (
+      <SearchResults results={results} query={query || categoryFilter} total={total} />
+    ) : (
+      <div class="text-center py-20">
+        <svg class="w-16 h-16 mx-auto text-text-dim mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+        </svg>
+        <p class="text-text-muted">Search across your entire content archive</p>
+        <p class="text-sm text-text-dim mt-1">Type to find saved content by title, description, or category</p>
+      </div>
+    )}
+  </div>
+</DashboardLayout>

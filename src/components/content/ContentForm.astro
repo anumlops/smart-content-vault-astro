@@ -1,0 +1,54 @@
+---
+export interface Props {
+  error?: string
+}
+const { error } = Astro.props
+---
+
+<div class="glass-card rounded-xl p-6 max-w-lg mx-auto">
+  <h2 class="text-lg font-semibold text-white mb-1">Save New Content</h2>
+  <p class="text-sm text-text-muted mb-6">Paste a link and save it instantly</p>
+
+  {error && (
+    <div class="mb-4 p-3 rounded-lg bg-danger/10 border border-danger/20 text-sm text-danger">
+      {error}
+    </div>
+  )}
+
+  <form method="POST" action="/api/content" class="space-y-4">
+    <div>
+      <label for="url" class="block text-sm font-medium text-text-muted mb-1.5">URL</label>
+      <div class="relative">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        </svg>
+        <input
+          type="url"
+          name="url"
+          id="url"
+          required
+          placeholder="https://example.com"
+          class="input-field pl-10"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label for="note" class="block text-sm font-medium text-text-muted mb-1.5">Notes (optional)</label>
+      <textarea
+        name="note"
+        id="note"
+        rows="3"
+        placeholder="Add your notes or thoughts about this content..."
+        class="input-field resize-none"
+      ></textarea>
+    </div>
+
+    <button type="submit" class="btn-primary w-full">
+      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 4v16m8-8H4" />
+      </svg>
+      Save Content
+    </button>
+  </form>
+</div>

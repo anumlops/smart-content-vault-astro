@@ -1,0 +1,31 @@
+---
+import { getDomain, getContentTypeColor, formatRelativeTime } from '../../lib/utils'
+
+export interface Props {
+  items: Array<{
+    id: string
+    url: string
+    title: string | null
+    contentType: string
+    createdAt: string
+  }>
+}
+---
+
+<div class="relative space-y-3">
+  {Astro.props.items.map((item, i) => {
+    const typeColor = getContentTypeColor(item.contentType)
+    return (
+      <div class="flex gap-3">
+        <div class="flex flex-col items-center">
+          <div class={`w-2.5 h-2.5 rounded-full ${typeColor} ring-2 ring-surface`}></div>
+          {i < Astro.props.items.length - 1 && <div class="w-px flex-1 bg-border mt-1"></div>}
+        </div>
+        <a href={`/content/${item.id}`} class="flex-1 pb-3 group">
+          <p class="text-sm text-white group-hover:text-primary transition-colors">{item.title || getDomain(item.url)}</p>
+          <p class="text-xs text-text-muted mt-0.5">Saved {formatRelativeTime(item.createdAt)} · {item.contentType}</p>
+        </a>
+      </div>
+    )
+  })}
+</div>

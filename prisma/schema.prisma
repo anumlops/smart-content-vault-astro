@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  savedContents SavedContent[]
+}
+
+model SavedContent {
+  id               String   @id @default(cuid())
+  userId           String
+  originalUrl      String
+  normalizedUrl    String
+  sourceDomain     String
+  contentType      String   @default("website")
+  title            String?
+  description      String?
+  thumbnailUrl     String?
+  faviconUrl       String?
+  author           String?
+  publisher        String?
+  publishedAt      DateTime?
+  category         String?
+  favorite         Boolean  @default(false)
+  archived         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lastViewedAt     DateTime?
+  viewCount        Int      @default(0)
+  rawContent       String?
+  extractedText    String?
+  aiSummary        String?
+  aiTags           String?
+  aiCategory       String?
+  embeddingReference String?
+  enrichmentStatus String   @default("pending")
+  processingVersion Int?
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tags  ContentTag[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+  @@index([sourceDomain])
+  @@index([contentType])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  emoji     String?
+  color     String?
+  createdAt DateTime @default(now())
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  contents ContentTag[]
+}
+
+model ContentTag {
+  contentId String
+  tagId     String
+
+  content SavedContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  tag     Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contentId, tagId])
+  @@index([tagId])
+}

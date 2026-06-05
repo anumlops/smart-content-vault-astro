@@ -1,0 +1,10 @@
+---
+import AuthLayout from '../layouts/AuthLayout.astro'
+import RegisterForm from '../components/auth/RegisterForm.astro'
+
+const error = Astro.url.searchParams.get('error')
+---
+
+<AuthLayout>
+  <RegisterForm error={error || undefined} />
+</AuthLayout>

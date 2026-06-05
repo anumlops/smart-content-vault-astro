@@ -1,0 +1,49 @@
+---
+import DashboardLayout from '../../layouts/DashboardLayout.astro'
+import ContentDetail from '../../components/content/ContentDetail.astro'
+import { prisma } from '../../lib/prisma'
+
+export const prerender = false
+
+const { id } = Astro.params
+let content: any = null
+let notFound = false
+
+try {
+  const record = await prisma.savedContent.findUnique({
+    where: { id },
+    include: { tags: { include: { tag: true } } },
+  })
+
+  if (record) {
+    content = {
+      id: record.id,
+      url: record.originalUrl,
+      title: record.title,
+      description: record.description,
+      thumbnailUrl: record.thumbnailUrl,
+      contentType: record.contentType,
+      category: record.category,
+      tags: record.tags.map(ct => ({ id: ct.tag.id, name: ct.tag.name, slug: ct.tag.slug })),
+      createdAt: record.createdAt.toISOString(),
+      note: null,
+      author: record.author,
+      publisher: record.publisher,
+    }
+  } else {
+    notFound = true
+  }
+} catch {
+  notFound = true
+}
+
+if (notFound) {
+  return Astro.redirect('/dashboard')
+}
+---
+
+<DashboardLayout title={`${content?.title || 'Content'} - Smart Content Vault`}>
+  <div class="pt-4">
+    <ContentDetail {...content} />
+  </div>
+</DashboardLayout>

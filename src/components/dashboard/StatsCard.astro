@@ -1,0 +1,22 @@
+---
+export interface Props {
+  label: string
+  value: string | number
+  icon: 'saves' | 'categories' | 'today'
+}
+const { label, value, icon } = Astro.props
+---
+
+<div class="glass-card rounded-xl p-4">
+  <div class="flex items-center gap-3">
+    <div class="w-10 h-10 rounded-lg bg-primary-muted flex items-center justify-center text-primary">
+      {icon === 'saves' && <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>}
+      {icon === 'categories' && <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>}
+      {icon === 'today' && <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+    </div>
+    <div>
+      <p class="text-2xl font-semibold text-white">{value}</p>
+      <p class="text-xs text-text-muted">{label}</p>
+    </div>
+  </div>
+</div>

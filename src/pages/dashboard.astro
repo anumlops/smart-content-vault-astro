@@ -1,0 +1,91 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro'
+import StatsCard from '../components/dashboard/StatsCard.astro'
+import RecentSaves from '../components/dashboard/RecentSaves.astro'
+import CategoryCards from '../components/dashboard/CategoryCards.astro'
+import TimelineWidget from '../components/dashboard/TimelineWidget.astro'
+import { prisma } from '../lib/prisma'
+
+let stats = { totalSaves: 0, categoryDistribution: {}, recentSaves: [], topTags: [], weeklyActivity: [] }
+let error: string | null = null
+
+try {
+  const totalSaves = await prisma.savedContent.count()
+  const allContent = await prisma.savedContent.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    include: { tags: { include: { tag: true } } },
+  })
+
+  const categoryRaw = await prisma.savedContent.groupBy({
+    by: ['category'],
+    _count: { id: true },
+  })
+
+  const categoryDistribution: Record<string, number> = {}
+  for (const cat of categoryRaw) {
+    if (cat.category) categoryDistribution[cat.category] = cat._count.id
+  }
+
+  const recentSaves = allContent.map(c => ({
+    id: c.id,
+    url: c.originalUrl,
+    title: c.title,
+    contentType: c.contentType,
+    category: c.category,
+    tags: c.tags.map(ct => ({ id: ct.tag.id, name: ct.tag.name, slug: ct.tag.slug })),
+    createdAt: c.createdAt.toISOString(),
+  }))
+
+  stats = {
+    totalSaves,
+    categoryDistribution,
+    recentSaves,
+    topTags: [],
+    weeklyActivity: [],
+  }
+} catch (e) {
+  error = 'Could not load dashboard data'
+}
+---
+
+<DashboardLayout title="Dashboard - Smart Content Vault">
+  {error ? (
+    <div class="flex flex-col items-center justify-center py-20">
+      <p class="text-text-muted">{error}</p>
+      <p class="text-sm text-text-dim mt-2">Make sure your database is connected and seeded.</p>
+    </div>
+  ) : (
+    <div class="space-y-8">
+      <div>
+        <h1 class="text-2xl font-semibold text-white">Dashboard</h1>
+        <p class="text-sm text-text-muted mt-1">Overview of your content archive</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatsCard label="Total Saves" value={stats.totalSaves} icon="saves" />
+        <StatsCard label="Categories" value={Object.keys(stats.categoryDistribution).length} icon="categories" />
+        <StatsCard label="Recent Activity" value={stats.recentSaves.length} icon="today" />
+      </div>
+
+      <section>
+        <h2 class="text-lg font-semibold text-white mb-4">Recently Saved</h2>
+        <RecentSaves items={stats.recentSaves} />
+      </section>
+
+      <section>
+        <h2 class="text-lg font-semibold text-white mb-4">Categories</h2>
+        <CategoryCards distribution={stats.categoryDistribution} />
+      </section>
+
+      {stats.recentSaves.length > 0 && (
+        <section>
+          <h2 class="text-lg font-semibold text-white mb-4">Timeline</h2>
+          <div class="glass-card rounded-xl p-4">
+            <TimelineWidget items={stats.recentSaves.slice(0, 5)} />
+          </div>
+        </section>
+      )}
+    </div>
+  )}
+</DashboardLayout>

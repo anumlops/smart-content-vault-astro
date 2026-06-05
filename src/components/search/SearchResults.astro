@@ -1,0 +1,61 @@
+---
+import ContentCard from '../content/ContentCard.astro'
+
+export interface Props {
+  results: Array<{
+    id: string
+    url: string
+    title: string | null
+    description: string | null
+    thumbnailUrl: string | null
+    contentType: string
+    category: string | null
+    tags: { id: string; name: string; slug: string }[]
+    createdAt: string
+    score: number
+  }>
+  query: string
+  total: number
+}
+
+const { results, query, total } = Astro.props
+---
+
+<div class="space-y-4">
+  <p class="text-sm text-text-muted">
+    Found {total} result{total !== 1 ? 's' : ''} for "{query}"
+  </p>
+
+  {results.length > 0 ? (
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {results.map((item) => (
+        <div class="relative">
+          <ContentCard
+            id={item.id}
+            url={item.url}
+            title={item.title}
+            description={item.description}
+            thumbnailUrl={item.thumbnailUrl}
+            contentType={item.contentType}
+            category={item.category}
+            tags={item.tags}
+            createdAt={item.createdAt}
+          />
+          <div class="absolute top-2 left-2 z-10">
+            <span class="badge bg-primary/80 text-white text-[10px] border-0">
+              {item.score}% match
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="text-center py-16">
+      <svg class="w-12 h-12 mx-auto text-text-dim mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+      </svg>
+      <p class="text-text-muted">No results found for "{query}"</p>
+      <p class="text-sm text-text-dim mt-1">Try different keywords or browse categories</p>
+    </div>
+  )}
+</div>

@@ -1,0 +1,40 @@
+---
+import { CATEGORY_META } from '../../types'
+
+export interface Props {
+  distribution: Record<string, number>
+}
+
+const { distribution } = Astro.props
+const total = Object.values(distribution).reduce((a, b) => a + b, 0)
+const entries = Object.entries(distribution)
+  .filter(([, count]) => count > 0)
+  .sort(([, a], [, b]) => b - a)
+  .slice(0, 8)
+---
+
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+  {entries.map(([category, count]) => {
+    const meta = CATEGORY_META[category]
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0
+
+    return (
+      <a
+        href={`/search?category=${category}`}
+        class="glass-card rounded-xl p-4 hover:bg-surface-elevated transition-colors"
+      >
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-lg">{meta?.emoji || '📌'}</span>
+          <span class="text-sm font-medium text-white truncate">{category}</span>
+        </div>
+        <p class="text-xs text-text-muted mb-2">{count} item{count !== 1 ? 's' : ''}</p>
+        <div class="w-full h-1.5 rounded-full bg-surface-muted overflow-hidden">
+          <div
+            class="h-full rounded-full bg-primary/60 transition-all"
+            style={`width: ${pct}%`}
+          ></div>
+        </div>
+      </a>
+    )
+  })}
+</div>
