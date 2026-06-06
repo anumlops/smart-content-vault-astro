@@ -14,20 +14,19 @@
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
     "setup": "npm install && prisma generate && prisma db push",
-    "postinstall": "prisma generate",
-    "intelligence:dev": "cd services/website-intelligence && python -m uvicorn main:app --reload --port 8001",
-    "intelligence:start": "cd services/website-intelligence && python -m uvicorn main:app --port 8001",
-    "intelligence:cli": "cd services/website-intelligence && python cli.py"
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@astrojs/vercel": "^10.0.8",
     "@auth/core": "^0.34.3",
+    "@mozilla/readability": "^0.6.0",
     "@prisma/client": "^5.22.0",
     "@tailwindcss/vite": "^4.3.0",
     "astro": "^6.4.4",
     "better-auth": "^1.6.14",
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
+    "jsdom": "^29.1.1",
     "lucide-react": "^1.17.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0"

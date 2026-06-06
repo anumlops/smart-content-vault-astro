@@ -1,9 +1,7 @@
 import type { APIRoute } from 'astro'
 import { prisma } from '../../lib/prisma'
 import { verifySession } from '../../lib/auth'
-import { getDomain } from '../../lib/utils'
-
-const PYTHON_SERVICE_URL = process.env.WEBSITE_INTELLIGENCE_URL || 'http://localhost:8001'
+import { WebsiteProcessor } from '../../modules/website/service'
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const session = cookies.get('session')?.value
@@ -25,89 +23,67 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json()
     const contentId = body.contentId?.toString()
+    const url = body.url?.toString()
 
-    if (!contentId) {
-      return new Response(JSON.stringify({ error: 'contentId is required' }), {
+    if (!contentId && !url) {
+      return new Response(JSON.stringify({ error: 'contentId or url required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    const content = await prisma.savedContent.findUnique({
-      where: { id: contentId },
-    })
+    let targetUrl = url
+    let existingContent = null
 
-    if (!content || content.userId !== payload.userId) {
-      return new Response(JSON.stringify({ error: 'Content not found' }), {
-        status: 404,
+    if (contentId) {
+      existingContent = await prisma.savedContent.findUnique({
+        where: { id: contentId },
+      })
+
+      if (!existingContent || existingContent.userId !== payload.userId) {
+        return new Response(JSON.stringify({ error: 'Content not found' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+
+      targetUrl = existingContent.originalUrl
+    }
+
+    if (!targetUrl) {
+      return new Response(JSON.stringify({ error: 'No URL to process' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    await prisma.savedContent.update({
-      where: { id: contentId },
-      data: { enrichmentStatus: 'processing' },
-    })
-
-    let analysisResult: any
-
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 30000)
-
-      const response = await fetch(`${PYTHON_SERVICE_URL}/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: content.originalUrl }),
-        signal: controller.signal,
+    if (existingContent) {
+      await prisma.savedContent.update({
+        where: { id: contentId },
+        data: { enrichmentStatus: 'processing' },
       })
-      clearTimeout(timeout)
-
-      if (!response.ok) {
-        throw new Error(`Python service returned ${response.status}`)
-      }
-
-      analysisResult = await response.json()
-    } catch (serviceError: any) {
-      // Fallback: use existing metadata as enrichment
-      analysisResult = {
-        url: content.originalUrl,
-        domain: getDomain(content.originalUrl),
-        title: content.title,
-        summary: content.description,
-        category: content.category,
-        tags: [],
-        key_takeaways: [],
-        status: 'completed',
-        error: serviceError.message || 'Python service unavailable, used fallback',
-      }
     }
 
-    const tags = analysisResult.tags || []
-    const category = analysisResult.category || content.category || null
+    const processor = new WebsiteProcessor()
+    const result = await processor.processUrl(targetUrl)
 
-    await prisma.savedContent.update({
-      where: { id: contentId },
-      data: {
-        title: analysisResult.title || content.title,
-        description: analysisResult.summary || content.description,
-        category: category,
-        aiSummary: analysisResult.summary || null,
-        aiTags: JSON.stringify(tags),
-        aiCategory: category,
-        enrichmentStatus: 'completed',
-        processingVersion: 1,
-      },
-    })
-
-    if (tags.length > 0) {
-      const existingTags = await prisma.contentTag.findMany({
-        where: { contentId },
-        select: { tagId: true },
+    if (existingContent && contentId) {
+      await prisma.savedContent.update({
+        where: { id: contentId },
+        data: {
+          title: result.title || existingContent.title,
+          description: result.summary || existingContent.description,
+          category: result.category || existingContent.category,
+          aiSummary: result.summary,
+          aiTags: JSON.stringify(result.tags),
+          aiCategory: result.category,
+          keyTakeaways: JSON.stringify(result.keyTakeaways),
+          enrichmentStatus: result.status,
+          processingVersion: (existingContent.processingVersion || 0) + 1,
+        },
       })
-      const existingTagIds = new Set(existingTags.map((t) => t.tagId))
 
-      for (const tagName of tags) {
+      for (const tagName of result.tags) {
         const slug = tagName.toLowerCase().replace(/[^a-z0-9-]/g, '')
         const tag = await prisma.tag.upsert({
           where: { slug },
@@ -115,7 +91,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
           create: { name: tagName, slug },
         })
 
-        if (!existingTagIds.has(tag.id)) {
+        const exists = await prisma.contentTag.findUnique({
+          where: { contentId_tagId: { contentId, tagId: tag.id } },
+        })
+
+        if (!exists) {
           await prisma.contentTag.create({
             data: { contentId, tagId: tag.id },
           }).catch(() => {})
@@ -126,13 +106,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     return new Response(
       JSON.stringify({
         success: true,
-        id: contentId,
-        title: analysisResult.title || content.title,
-        summary: analysisResult.summary || content.description,
-        category: category,
-        tags: tags,
-        key_takeaways: analysisResult.key_takeaways || [],
-        enrichmentStatus: 'completed',
+        id: contentId || null,
+        url: targetUrl,
+        title: result.title,
+        summary: result.summary,
+        category: result.category,
+        tags: result.tags,
+        keyTakeaways: result.keyTakeaways,
+        enrichmentStatus: result.status,
+        error: result.error,
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
     )
@@ -193,8 +175,8 @@ export const GET: APIRoute = async ({ cookies, url }) => {
       aiSummary: content.aiSummary,
       aiTags: content.aiTags ? JSON.parse(content.aiTags) : [],
       aiCategory: content.aiCategory,
+      keyTakeaways: content.keyTakeaways ? JSON.parse(content.keyTakeaways) : [],
       enrichmentStatus: content.enrichmentStatus,
-      keyTakeaways: [], // stored in a future model
     }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }
   )

@@ -1,43 +1,29 @@
 # Website Intelligence Module
 
-Extracts and analyzes content from any website URL using Trafilatura + LLM.
+Extracts and analyzes content from any website URL.
 
 ## Architecture
 
 ```
-URL → WebsiteCrawler (Trafilatura) → WebsiteAnalyzer (LLM) → ProcessingResult
+URL → WebsiteCrawler (Readability) → WebsiteAnalyzer (keyword/LLM) → ProcessingResult
 ```
 
-## Files
+## How It Works
 
-| File | Purpose |
-|------|---------|
-| `crawler.py` | Extracts clean article content using Trafilatura |
-| `analyzer.py` | Sends content to LLM for summary, category, tags, takeaways |
-| `prompts.py` | Centralized LLM prompt templates |
-| `schemas.py` | Website-specific data classes |
-| `service.py` | Main `WebsiteProcessor` implementing the `ContentProcessor` interface |
+1. **Crawler** fetches the URL and extracts clean article content using Mozilla's Readability library
+2. **Analyzer** attempts LLM analysis (if `LLM_API_KEY` is set), otherwise falls back to keyword-based analysis
+3. **Service** orchestrates the full pipeline
 
-## Usage
+## Zero API Key Required
 
-```python
-from src.modules.website import WebsiteProcessor
+The module works **without any API key**. If `LLM_API_KEY` is not set, it uses built-in keyword analysis:
+- Category detection via keyword matching across title, domain, and content
+- Tag generation from significant words
+- Summary from first sentences
+- Key takeaways from significant sentences
 
-processor = WebsiteProcessor()
-result = await processor.process_url("https://example.com/article")
-print(result.summary)
-print(result.category)
-print(result.tags)
-```
-
-## Adding a New Content Source
+## Adding YouTube / Instagram
 
 1. Create folder `src/modules/<source>/`
-2. Implement `ContentProcessor` protocol (see `src/modules/shared/types.py`)
-3. Create `__init__.py` exporting your processor
-4. Register in the unified ingestion system
-
-## Dependencies
-
-- `trafilatura` — content extraction
-- `httpx` — LLM API calls
+2. Implement `ContentProcessor` from `src/modules/shared/types.ts`
+3. Follow the same `crawler → analyzer → service` pattern
