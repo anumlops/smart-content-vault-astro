@@ -46,6 +46,7 @@ model SavedContent {
   aiTags           String?
   aiCategory       String?
   embeddingReference String?
+  keyTakeaways   String?
   enrichmentStatus String   @default("pending")
   processingVersion Int?
 
