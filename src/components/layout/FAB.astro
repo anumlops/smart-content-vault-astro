@@ -1,13 +1,92 @@
----
-// Floating Action Button for quick content save
----
+<div class="fixed bottom-24 lg:bottom-24 right-4 z-50 flex flex-col items-end gap-3">
+  <button
+    id="lightning-save"
+    class="flex items-center gap-2 px-4 py-3 bg-yellow-500 text-black rounded-full shadow-lg hover:bg-yellow-400 transition-all duration-200 hover:scale-105"
+    title="Quick save from clipboard"
+  >
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+    <span class="hidden sm:inline text-sm font-medium">Quick Save</span>
+  </button>
 
-<a
-  href="/content/new"
-  class="fixed bottom-20 lg:bottom-6 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-full shadow-lg hover:bg-primary-hover transition-all duration-200 hover:scale-105"
->
-  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M12 4v16m8-8H4" />
-  </svg>
-  <span class="hidden sm:inline text-sm font-medium">Save Link</span>
-</a>
+  <a
+    href="/content/new"
+    class="flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-full shadow-lg hover:bg-primary-hover transition-all duration-200 hover:scale-105"
+  >
+    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 4v16m8-8H4" />
+    </svg>
+    <span class="hidden sm:inline text-sm font-medium">Save Link</span>
+  </a>
+</div>
+
+<div id="toast" class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 translate-x-[120%] opacity-0"></div>
+
+<script>
+  const toast = document.getElementById('toast')
+  let toastTimeout: any
+
+  function showToast(message: string, type: 'success' | 'error') {
+    clearTimeout(toastTimeout)
+    toast!.className = `fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 ${
+      type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+    }`
+    toast!.textContent = message
+    toast!.classList.remove('translate-x-[120%]', 'opacity-0')
+    toastTimeout = setTimeout(() => {
+      toast!.classList.add('translate-x-[120%]', 'opacity-0')
+    }, 3000)
+  }
+
+  document.getElementById('lightning-save')?.addEventListener('click', async () => {
+    const btn = document.getElementById('lightning-save') as HTMLButtonElement
+    btn.disabled = true
+    btn.innerHTML = '<svg class="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="80" stroke-dashoffset="60"/></svg>'
+
+    try {
+      const text = await navigator.clipboard.readText()
+      let url = text.trim()
+
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url
+      }
+
+      try {
+        new URL(url)
+      } catch {
+        showToast('Invalid link in clipboard', 'error')
+        btn.disabled = false
+        btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
+        window.location.href = '/content/new'
+        return
+      }
+
+      const res = await fetch('/api/content/quick', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        showToast(data.error || 'Failed to save', 'error')
+        btn.disabled = false
+        btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
+        window.location.href = '/content/new'
+        return
+      }
+
+      const data = await res.json()
+      showToast('Saved successfully!', 'success')
+      btn.disabled = false
+      btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
+      window.location.href = `/content/${data.id}`
+    } catch {
+      showToast('Could not read clipboard. Paste manually.', 'error')
+      btn.disabled = false
+      btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
+      window.location.href = '/content/new'
+    }
+  })
+</script>
