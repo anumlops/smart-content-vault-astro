@@ -1,4 +1,4 @@
-import { JSDOM } from 'jsdom'
+import { parseHTML } from 'linkedom'
 import { Readability } from '@mozilla/readability'
 
 import { extractDomain, validateUrl } from '../shared/utils'
@@ -52,14 +52,14 @@ export class WebsiteCrawler {
 
       const html = await response.text()
 
-      const doc = new JSDOM(html, { url })
-      const reader = new Readability(doc.window.document)
+      const { document } = parseHTML(html)
+      const reader = new Readability(document)
       const article = reader.parse()
 
       const title =
         article?.title ||
-        doc.window.document.querySelector('title')?.textContent ||
-        doc.window.document.querySelector('h1')?.textContent ||
+        document.querySelector('title')?.textContent ||
+        document.querySelector('h1')?.textContent ||
         null
 
       const text = article?.textContent?.trim() || null
