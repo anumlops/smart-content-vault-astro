@@ -87,7 +87,10 @@ async function run() {
 
     if (!resp.ok) {
       let errMsg = `Server returned ${resp.status}`
-      try { const e = await resp.json(); errMsg = e.error || errMsg } catch {}
+      try {
+        const text = await resp.text()
+        try { const e = JSON.parse(text); errMsg = e.error || text } catch { errMsg = text || errMsg }
+      } catch {}
       throw new Error(errMsg)
     }
 
