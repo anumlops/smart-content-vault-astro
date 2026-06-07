@@ -29,6 +29,9 @@ try {
       note: null,
       author: record.author,
       publisher: record.publisher,
+      aiSummary: record.aiSummary,
+      aiTags: record.aiTags ? JSON.parse(record.aiTags) : [],
+      keyTakeaways: record.keyTakeaways ? JSON.parse(record.keyTakeaways) : [],
     }
   } else {
     notFound = true

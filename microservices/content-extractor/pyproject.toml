@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=64.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "content-extractor"
+version = "0.1.0"
+description = "Extract clean content from any URL using Mozilla Readability"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.32.0",
+    "beautifulsoup4>=4.12.0",
+    "readability-lxml>=0.8.1",
+    "lxml>=5.0.0",
+    "pydantic>=2.10.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["extractor*", "schemas*"]

@@ -15,9 +15,12 @@ export interface Props {
   note?: string | null
   author?: string | null
   publisher?: string | null
+  aiSummary?: string | null
+  aiTags?: string[]
+  keyTakeaways?: string[]
 }
 
-const { id, url, title, description, thumbnailUrl, contentType, category, tags, createdAt, note, author, publisher } = Astro.props
+const { id, url, title, description, thumbnailUrl, contentType, category, tags, createdAt, note, author, publisher, aiSummary, aiTags, keyTakeaways } = Astro.props
 const domain = getDomain(url)
 const typeColor = getContentTypeColor(contentType)
 const catMeta = category ? CATEGORY_META[category] : null
@@ -112,6 +115,44 @@ const catMeta = category ? CATEGORY_META[category] : null
         <div>
           <h3 class="text-sm font-medium text-white mb-2">Your Note</h3>
           <p class="text-sm text-text-muted bg-surface-muted/30 rounded-lg p-3 border border-border">{note}</p>
+        </div>
+      )}
+
+      {(aiSummary || (aiTags && aiTags.length > 0) || (keyTakeaways && keyTakeaways.length > 0)) && (
+        <div class="border-t border-border pt-4 space-y-4">
+          <h3 class="text-sm font-medium text-white">AI Enrichment</h3>
+
+          {aiSummary && (
+            <div>
+              <h4 class="text-xs font-medium text-text-dim uppercase tracking-wider mb-1.5">Summary</h4>
+              <p class="text-sm text-text-muted leading-relaxed">{aiSummary}</p>
+            </div>
+          )}
+
+          {keyTakeaways && keyTakeaways.length > 0 && (
+            <div>
+              <h4 class="text-xs font-medium text-text-dim uppercase tracking-wider mb-1.5">Key Takeaways</h4>
+              <ul class="space-y-1.5">
+                {keyTakeaways.map((item) => (
+                  <li class="text-sm text-text-muted flex items-start gap-2">
+                    <span class="text-primary mt-0.5 shrink-0">•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {aiTags && aiTags.length > 0 && (
+            <div>
+              <h4 class="text-xs font-medium text-text-dim uppercase tracking-wider mb-1.5">Tags</h4>
+              <div class="flex flex-wrap gap-1.5">
+                {aiTags.map((tag) => (
+                  <span class="badge bg-primary-muted/30 text-primary border border-primary/20 text-xs">{tag}</span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

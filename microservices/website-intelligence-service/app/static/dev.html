@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Website Intelligence - Dev</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; color: #333; }
+  .wrap { max-width: 700px; margin: 0 auto; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .sub { color: #666; font-size: 13px; margin-bottom: 20px; }
+  .box { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 16px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  input:focus { border-color: #2563eb; outline: none; }
+  button { margin-top: 10px; padding: 10px 24px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+  button:hover { background: #1d4ed8; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  .loading { color: #2563eb; font-size: 13px; margin-top: 8px; }
+  .err { color: #dc2626; font-size: 13px; margin-top: 8px; }
+  .stat { display: inline-block; background: #f0f0f0; border-radius: 12px; padding: 4px 12px; font-size: 12px; margin-right: 6px; }
+  .tag { display: inline-block; background: #dbeafe; color: #1e40af; border-radius: 12px; padding: 4px 12px; font-size: 13px; margin: 3px 4px 3px 0; }
+  pre { background: #f8f8f8; border-radius: 6px; padding: 12px; font-size: 13px; overflow-x: auto; white-space: pre-wrap; max-height: 300px; }
+  .suc { color: #16a34a; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Website Intelligence</h1>
+  <p class="sub">Dev Console — Test URL extraction &amp; AI analysis</p>
+
+  <div class="box">
+    <label for="url">URL to analyze</label>
+    <input type="url" id="url" placeholder="https://en.wikipedia.org/wiki/Example" value="https://en.wikipedia.org/wiki/Anjeyanadri_Hill">
+    <button id="go" onclick="run()">Analyze</button>
+    <div id="status"></div>
+    <div id="error" class="err" style="display:none"></div>
+  </div>
+
+  <div id="result" style="display:none">
+    <div class="box">
+      <h2 id="rTitle" style="margin:0 0 4px;font-size:18px;"></h2>
+      <div id="rMeta" style="font-size:13px;color:#666;margin-bottom:12px;"></div>
+      <div id="rTags" style="margin-bottom:12px;"></div>
+      <h3 style="font-size:14px;margin:0 0 6px;">Summary</h3>
+      <p id="rSummary" style="font-size:14px;line-height:1.6;color:#444;"></p>
+      <button id="pub" onclick="publish()" style="margin-top:16px;">Approve &amp; Publish</button>
+      <div id="pubMsg" class="suc" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let sessionId = null;
+
+async function run() {
+  const url = document.getElementById('url').value.trim();
+  if (!url) return;
+
+  document.getElementById('go').disabled = true;
+  document.getElementById('status').textContent = 'Extracting and analyzing...';
+  document.getElementById('status').className = 'loading';
+  document.getElementById('error').style.display = 'none';
+  document.getElementById('result').style.display = 'none';
+
+  try {
+    const resp = await fetch('/dev/test', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url}),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.detail || 'Request failed');
+
+    sessionId = data.session_id;
+    document.getElementById('rTitle').textContent = data.title;
+    document.getElementById('rMeta').innerHTML = '<span class=stat>' + data.word_count.toLocaleString() + ' words</span> <span class=stat>' + data.session_id + '</span>';
+    document.getElementById('rTags').innerHTML = data.tags.map(t => '<span class=tag>' + t + '</span>').join('');
+    document.getElementById('rSummary').textContent = data.summary;
+    document.getElementById('pubMsg').style.display = 'none';
+    document.getElementById('pub').disabled = false;
+    document.getElementById('pub').textContent = 'Approve & Publish';
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('status').textContent = '';
+  } catch (e) {
+    document.getElementById('error').textContent = e.message;
+    document.getElementById('error').style.display = 'block';
+  } finally {
+    document.getElementById('go').disabled = false;
+    document.getElementById('status').className = '';
+  }
+}
+
+async function publish() {
+  document.getElementById('pub').disabled = true;
+  document.getElementById('pub').textContent = 'Publishing...';
+
+  try {
+    const resp = await fetch('/dev/publish/' + sessionId, {method: 'POST'});
+    const data = await resp.json();
+    const msg = document.getElementById('pubMsg');
+    msg.textContent = data.success ? 'Published successfully!' : data.message;
+    msg.style.display = 'block';
+    if (data.success) document.getElementById('pub').textContent = 'Published';
+    else document.getElementById('pub').disabled = false;
+  } catch (e) {
+    document.getElementById('pubMsg').textContent = 'Failed: ' + e.message;
+    document.getElementById('pubMsg').style.display = 'block';
+    document.getElementById('pub').disabled = false;
+  }
+}
+</script>
+</body>
+</html>
