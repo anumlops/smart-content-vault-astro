@@ -1,0 +1,136 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro'
+---
+
+<DashboardLayout title="Dev Console">
+  <div id="dev-root"></div>
+</DashboardLayout>
+
+<script>
+const API = '/api/enrich'
+
+async function run() {
+  const url = document.getElementById('urlInput').value.trim()
+  if (!url) return
+
+  const btn = document.getElementById('runBtn')
+  const status = document.getElementById('status')
+  const error = document.getElementById('error')
+  const result = document.getElementById('result')
+
+  btn.disabled = true
+  status.textContent = 'Extracting and analyzing...'
+  status.className = 'text-sm text-blue-400 mt-2'
+  error.classList.add('hidden')
+  result.classList.add('hidden')
+
+  try {
+    const resp = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    const data = await resp.json()
+
+    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`)
+
+    document.getElementById('rTitle').textContent = data.title || '(untitled)'
+    document.getElementById('rCategory').textContent = data.category || '—'
+    document.getElementById('rSummary').textContent = data.summary || '—'
+
+    const tagsEl = document.getElementById('rTags')
+    tagsEl.innerHTML = ''
+    if (data.tags?.length) {
+      tagsEl.innerHTML = data.tags.map(t => `<span class="bg-blue-900/30 text-blue-300 border border-blue-800/40 rounded-full px-3 py-1 text-xs">${t}</span>`).join(' ')
+    } else {
+      tagsEl.innerHTML = '<span class="text-text-dim text-xs">No tags</span>'
+    }
+
+    const takeawaysEl = document.getElementById('rTakeaways')
+    takeawaysEl.innerHTML = ''
+    if (data.keyTakeaways?.length) {
+      const list = document.createElement('ul')
+      list.className = 'space-y-1.5'
+      data.keyTakeaways.forEach(item => {
+        const li = document.createElement('li')
+        li.className = 'text-sm text-text-muted flex items-start gap-2'
+        li.innerHTML = `<span class="text-primary mt-0.5 shrink-0">•</span><span>${item}</span>`
+        list.appendChild(li)
+      })
+      takeawaysEl.appendChild(list)
+    } else {
+      takeawaysEl.innerHTML = '<span class="text-text-dim text-xs">No takeaways</span>'
+    }
+
+    document.getElementById('rStatus').textContent = data.enrichmentStatus || 'completed'
+    document.getElementById('rStatus').className =
+      data.enrichmentStatus === 'completed' ? 'text-green-400 text-sm' :
+      data.enrichmentStatus === 'failed' ? 'text-red-400 text-sm' :
+      'text-yellow-400 text-sm'
+
+    result.classList.remove('hidden')
+    status.textContent = ''
+  } catch (e) {
+    if (e.message.includes('401') || e.message.includes('Unauthorized')) {
+      error.textContent = 'Please log in first to use the dev console'
+      error.innerHTML = 'Please <a href="/login" class="text-blue-400 underline">log in</a> first to use the dev console'
+    } else {
+      error.textContent = e.message
+    }
+    error.classList.remove('hidden')
+  } finally {
+    btn.disabled = false
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const html = `
+    <div class="max-w-3xl mx-auto space-y-6">
+      <div>
+        <h1 class="text-xl font-semibold text-white">Dev Console</h1>
+        <p class="text-sm text-text-dim mt-1">Test URL extraction and AI analysis</p>
+      </div>
+
+      <div class="bg-surface-muted border border-border rounded-xl p-5">
+        <label class="block text-sm font-medium text-text-muted mb-2">URL to analyze</label>
+        <div class="flex gap-2">
+          <input id="urlInput" type="url" value="https://en.wikipedia.org/wiki/Anjeyanadri_Hill" class="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-primary/50" placeholder="https://example.com/article">
+          <button id="runBtn" onclick="run()" class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors">Analyze</button>
+        </div>
+        <div id="status"></div>
+        <div id="error" class="hidden text-sm text-red-400 mt-2"></div>
+      </div>
+
+      <div id="result" class="hidden space-y-4">
+        <div class="bg-surface-muted border border-border rounded-xl p-5 space-y-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0">
+              <h2 id="rTitle" class="text-lg font-semibold text-white truncate"></h2>
+              <p class="text-xs text-text-dim mt-1">
+                Category: <span id="rCategory" class="text-text-muted"></span>
+                &middot; Status: <span id="rStatus"></span>
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-medium text-text-dim uppercase tracking-wider mb-2">Tags</h3>
+            <div id="rTags" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-medium text-text-dim uppercase tracking-wider mb-2">Summary</h3>
+            <p id="rSummary" class="text-sm text-text-muted leading-relaxed"></p>
+          </div>
+
+          <div>
+            <h3 class="text-xs font-medium text-text-dim uppercase tracking-wider mb-2">Key Takeaways</h3>
+            <div id="rTakeaways"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+  document.getElementById('dev-root').innerHTML = html
+})
+</script>
