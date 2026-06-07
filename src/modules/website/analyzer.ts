@@ -28,7 +28,7 @@ export class WebsiteAnalyzer {
     const text = (content.text || '').slice(0, 8000)
     if (!text) return null
 
-    const microserviceUrl = process.env.AI_MICROSERVICE_URL || '/api'
+    const microserviceUrl = process.env.AI_MICROSERVICE_URL || '/api/llm'
     const llmEndpoint = `${microserviceUrl}/analyze-llm`
     try {
       const controller = new AbortController()
