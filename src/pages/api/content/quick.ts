@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro'
 import { prisma } from '../../../lib/prisma'
 import { processContent } from '../../../lib/processing'
+import { enrichContent } from '../../../lib/enrich'
 import { verifySession } from '../../../lib/auth'
 
 export const POST: APIRoute = async ({ request, cookies }) => {
@@ -73,6 +74,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         },
       },
     })
+
+    await enrichContent(content.id, processed.originalUrl).catch(() => {})
 
     return new Response(JSON.stringify({ id: content.id }), {
       status: 200,
