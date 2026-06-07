@@ -3,6 +3,7 @@ import { cleanText, removeStopWords } from '../shared/utils'
 import type { WebsiteContent, WebsiteAnalysis } from './schemas'
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1/chat/completions'
+const FAST_MODEL = 'openai/gpt-4o-mini'
 const DEEPSEEK_MODEL = 'deepseek/deepseek-chat'
 const KIMI_MODEL = 'moonshotai/kimi-k2.6'
 
@@ -60,13 +61,13 @@ export class WebsiteAnalyzer {
     const apiKey = process.env.LLM_API_KEY
     if (!apiKey) return null
 
-    const promptText = text.slice(0, 3000)
+    const promptText = text.slice(0, 2000)
     let prompt = ANALYSIS_PROMPT.replace('{content}', promptText)
     if (title) prompt += `\n\nThe page title is: ${title}`
 
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 9000)
+      const timeout = setTimeout(() => controller.abort(), 7000)
 
       const response = await fetch(OPENROUTER_BASE, {
         signal: controller.signal,
@@ -137,6 +138,7 @@ export class WebsiteAnalyzer {
     const title = content.title || undefined
 
     for (const { model, label } of [
+      { model: FAST_MODEL, label: 'GPT-4o-mini' },
       { model: DEEPSEEK_MODEL, label: 'DeepSeek' },
       { model: KIMI_MODEL, label: 'Kimi' },
     ]) {
