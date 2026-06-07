@@ -10,6 +10,8 @@ from app.extractor import ExtractorService
 from app.jobs import JobStatus
 from app.jobs.manager import JobManager
 from app.schemas import (
+    AnalyzeLLMRequest,
+    AnalyzeLLMResponse,
     AnalyzeRequest,
     AnalyzeResponse,
     ExtractRequest,
@@ -59,6 +61,12 @@ def extract_content(request: ExtractRequest):
 def analyze_content(request: AnalyzeRequest):
     result = analyzer.analyze(content=request.content, title=request.title)
     return AnalyzeResponse(**result)
+
+
+@router.post("/analyze-llm", response_model=AnalyzeLLMResponse)
+def analyze_llm(request: AnalyzeLLMRequest):
+    result = ai_service.analyze(content=request.content, title=request.title)
+    return AnalyzeLLMResponse(**result)
 
 
 @router.post("/process-url", response_model=ProcessURLResponse)

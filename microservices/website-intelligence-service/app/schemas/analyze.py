@@ -12,3 +12,13 @@ class AnalyzeResponse(BaseModel):
     category: str
     tags: list[str]
     key_takeaways: list[str]
+
+
+class AnalyzeLLMRequest(BaseModel):
+    title: str | None = None
+    content: str
+
+
+class AnalyzeLLMResponse(BaseModel):
+    summary: str
+    tags: list[str]

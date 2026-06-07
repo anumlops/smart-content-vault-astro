@@ -1,4 +1,4 @@
-from .analyze import AnalyzeRequest, AnalyzeResponse
+from .analyze import AnalyzeLLMRequest, AnalyzeLLMResponse, AnalyzeRequest, AnalyzeResponse
 from .content import ExtractRequest, ExtractResponse
 from .jobs import JobResponse, ProcessURLRequest, ProcessURLResponse
 

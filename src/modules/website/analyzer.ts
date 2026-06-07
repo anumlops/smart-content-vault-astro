@@ -25,19 +25,46 @@ export class WebsiteAnalyzer {
   }
 
   private async tryLlmAnalysis(content: WebsiteContent): Promise<WebsiteAnalysis | null> {
+    const text = (content.text || '').slice(0, 8000)
+    if (!text) return null
+
+    const microserviceUrl = process.env.AI_MICROSERVICE_URL
+    if (microserviceUrl) {
+      try {
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 60000)
+        const response = await fetch(`${microserviceUrl}/api/v1/analyze-llm`, {
+          signal: controller.signal,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: content.title, content: text }),
+        })
+        clearTimeout(timeout)
+        if (response.ok) {
+          const data = await response.json()
+          return {
+            title: content.title || null,
+            summary: data.summary || null,
+            category: this.detectCategory(content),
+            tags: Array.isArray(data.tags) ? data.tags.slice(0, 5) : [],
+            keyTakeaways: this.generateTakeaways(text),
+            processedAt: new Date().toISOString(),
+          }
+        }
+      } catch {
+        // fall through to direct LLM
+      }
+    }
+
     const apiKey = process.env.LLM_API_KEY
     const apiUrl = process.env.LLM_API_URL || 'https://api.openai.com/v1/chat/completions'
     const model = process.env.LLM_MODEL || 'gpt-4o-mini'
-
     if (!apiKey) return null
 
-    const text = (content.text || '').slice(0, 8000)
     const userPrompt = buildUserPrompt(content.title, content.domain, content.url, text)
-
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 30000)
-
       const response = await fetch(apiUrl, {
         signal: controller.signal,
         method: 'POST',
@@ -57,13 +84,10 @@ export class WebsiteAnalyzer {
         }),
       })
       clearTimeout(timeout)
-
       if (!response.ok) return null
-
       const data = await response.json()
       const raw = data.choices?.[0]?.message?.content
       if (!raw) return null
-
       return this.parseAndValidate(raw, content)
     } catch {
       return null
