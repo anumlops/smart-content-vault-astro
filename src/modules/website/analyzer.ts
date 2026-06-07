@@ -60,13 +60,13 @@ export class WebsiteAnalyzer {
     const apiKey = process.env.LLM_API_KEY
     if (!apiKey) return null
 
-    const promptText = text.slice(0, 50000)
+    const promptText = text.slice(0, 3000)
     let prompt = ANALYSIS_PROMPT.replace('{content}', promptText)
     if (title) prompt += `\n\nThe page title is: ${title}`
 
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 45000)
+      const timeout = setTimeout(() => controller.abort(), 9000)
 
       const response = await fetch(OPENROUTER_BASE, {
         signal: controller.signal,
@@ -78,7 +78,7 @@ export class WebsiteAnalyzer {
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: prompt }],
-          max_tokens: 2000,
+          max_tokens: 500,
           temperature: 0.1,
         }),
       })

@@ -84,9 +84,17 @@ async function run() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     })
-    const data = await resp.json()
 
-    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`)
+    if (!resp.ok) {
+      let errMsg = `Server returned ${resp.status}`
+      try { const e = await resp.json(); errMsg = e.error || errMsg } catch {}
+      throw new Error(errMsg)
+    }
+
+    let data: any
+    try { data = await resp.json() } catch {
+      throw new Error('Server returned empty response - may have timed out')
+    }
 
     document.getElementById('rTitle').textContent = data.title || '(untitled)'
     document.getElementById('rCategory').textContent = data.category || '—'
