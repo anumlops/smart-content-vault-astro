@@ -2,11 +2,5 @@
   "framework": "astro",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "functions": {
-    "api/llm.py": {
-      "runtime": "@vercel/python@3.12",
-      "maxDuration": 60
-    }
-  }
+  "installCommand": "npm install"
 }

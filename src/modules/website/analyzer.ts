@@ -1,7 +1,39 @@
 import { CATEGORY_KEYWORDS, TAG_MIN_COUNT, TAG_MAX_COUNT, TAKEAWAY_MAX_COUNT } from '../shared/constants'
 import { cleanText, removeStopWords } from '../shared/utils'
 import type { WebsiteContent, WebsiteAnalysis } from './schemas'
-import { buildUserPrompt, SYSTEM_PROMPT } from './prompts'
+
+const OPENROUTER_BASE = 'https://openrouter.ai/api/v1/chat/completions'
+const DEEPSEEK_MODEL = 'deepseek/deepseek-chat'
+const KIMI_MODEL = 'moonshotai/kimi-k2.6'
+
+const ANALYSIS_PROMPT = `You are a content analysis engine.
+
+Analyze the provided content.
+
+Generate:
+
+1. Summary under 500 words.
+2. Exactly 5 relevant tags.
+
+Tag Rules:
+
+- lowercase
+- concise
+- searchable
+- no duplicates
+
+Return ONLY valid JSON.
+
+Required Format:
+
+{
+  "summary": "",
+  "tags": []
+}
+
+Content:
+
+{content}`
 
 export class WebsiteAnalyzer {
   async analyze(content: WebsiteContent): Promise<WebsiteAnalysis> {
@@ -24,47 +56,19 @@ export class WebsiteAnalyzer {
     return this.keywordFallback(content, text)
   }
 
-  private async tryLlmAnalysis(content: WebsiteContent): Promise<WebsiteAnalysis | null> {
-    const text = (content.text || '').slice(0, 8000)
-    if (!text) return null
-
-    const microserviceUrl = process.env.AI_MICROSERVICE_URL || '/api/llm'
-    const llmEndpoint = `${microserviceUrl}/analyze-llm`
-    try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 60000)
-      const response = await fetch(llmEndpoint, {
-        signal: controller.signal,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: content.title, content: text }),
-      })
-      clearTimeout(timeout)
-      if (response.ok) {
-        const data = await response.json()
-        return {
-          title: content.title || null,
-          summary: data.summary || null,
-          category: this.detectCategory(content),
-          tags: Array.isArray(data.tags) ? data.tags.slice(0, 5) : [],
-          keyTakeaways: this.generateTakeaways(text),
-          processedAt: new Date().toISOString(),
-        }
-      }
-    } catch {
-      // fall through to direct LLM
-    }
-
+  private async callOpenRouter(model: string, text: string, title?: string): Promise<string | null> {
     const apiKey = process.env.LLM_API_KEY
-    const apiUrl = process.env.LLM_API_URL || 'https://api.openai.com/v1/chat/completions'
-    const model = process.env.LLM_MODEL || 'gpt-4o-mini'
     if (!apiKey) return null
 
-    const userPrompt = buildUserPrompt(content.title, content.domain, content.url, text)
+    const promptText = text.slice(0, 50000)
+    let prompt = ANALYSIS_PROMPT.replace('{content}', promptText)
+    if (title) prompt += `\n\nThe page title is: ${title}`
+
     try {
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 30000)
-      const response = await fetch(apiUrl, {
+      const timeout = setTimeout(() => controller.abort(), 45000)
+
+      const response = await fetch(OPENROUTER_BASE, {
         signal: controller.signal,
         method: 'POST',
         headers: {
@@ -73,46 +77,86 @@ export class WebsiteAnalyzer {
         },
         body: JSON.stringify({
           model,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            { role: 'user', content: userPrompt },
-          ],
-          temperature: 0.3,
-          max_tokens: 1000,
-          response_format: { type: 'json_object' },
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 2000,
+          temperature: 0.1,
         }),
       })
       clearTimeout(timeout)
+
+      if (response.status === 429) return null
       if (!response.ok) return null
+
       const data = await response.json()
-      const raw = data.choices?.[0]?.message?.content
-      if (!raw) return null
-      return this.parseAndValidate(raw, content)
+      const msg = data.choices?.[0]?.message
+      return msg?.content || msg?.reasoning || null
     } catch {
       return null
     }
   }
 
-  private parseAndValidate(raw: string, content: WebsiteContent): WebsiteAnalysis {
-    try {
-      const cleaned = raw.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '')
-      const parsed = JSON.parse(cleaned)
+  private parseLLMResponse(raw: string): { summary: string; tags: string[] } | null {
+    let text = raw.trim()
+    if (text.startsWith('```json')) text = text.slice(7)
+    else if (text.startsWith('```')) text = text.slice(3)
+    if (text.endsWith('```')) text = text.slice(0, -3)
+    text = text.trim()
 
-      const category = this.validateCategory(parsed.category) ? parsed.category : this.detectCategory(content)
-      const tags = this.validateTags(parsed.tags)
-      const takeaways = this.validateTakeaways(parsed.key_takeaways)
+    try {
+      const parsed = JSON.parse(text)
+      if (!parsed || typeof parsed !== 'object') return null
+
+      const summary = parsed.summary
+      if (typeof summary !== 'string' || !summary.trim()) return null
+      if (summary.split(/\s+/).length > 500) return null
+
+      const tags = parsed.tags
+      if (!Array.isArray(tags)) return null
+      if (tags.length !== 5) return null
+
+      const validatedTags: string[] = []
+      const seen = new Set<string>()
+      for (const tag of tags) {
+        if (typeof tag !== 'string' || !tag.trim()) return null
+        const lower = tag.toLowerCase().trim()
+        if (seen.has(lower)) return null
+        seen.add(lower)
+        validatedTags.push(lower)
+      }
+
+      return { summary: summary.trim(), tags: validatedTags }
+    } catch {
+      return null
+    }
+  }
+
+  private async tryLlmAnalysis(content: WebsiteContent): Promise<WebsiteAnalysis | null> {
+    const text = content.text || ''
+    if (!text) return null
+
+    const title = content.title || undefined
+
+    for (const { model, label } of [
+      { model: DEEPSEEK_MODEL, label: 'DeepSeek' },
+      { model: KIMI_MODEL, label: 'Kimi' },
+    ]) {
+      const raw = await this.callOpenRouter(model, text, title)
+      if (!raw) continue
+
+      const parsed = this.parseLLMResponse(raw)
+      if (!parsed) continue
 
       return {
-        title: parsed.title || content.title,
-        summary: parsed.summary || null,
-        category,
-        tags,
-        keyTakeaways: takeaways,
+        title: content.title || null,
+        summary: parsed.summary,
+        category: this.detectCategory(content),
+        tags: parsed.tags,
+        keyTakeaways: this.generateTakeaways(text),
         processedAt: new Date().toISOString(),
       }
-    } catch {
-      return this.keywordFallback(content, content.text || '')
     }
+
+    return null
   }
 
   private keywordFallback(content: WebsiteContent, text: string): WebsiteAnalysis {
@@ -149,7 +193,6 @@ export class WebsiteAnalyzer {
       for (const kw of keywords) {
         if (text.includes(kw.toLowerCase())) {
           score++
-          // Boost if keyword is in the title
           if ((content.title || '').toLowerCase().includes(kw.toLowerCase())) {
             score += 2
           }
@@ -162,12 +205,6 @@ export class WebsiteAnalyzer {
     }
 
     return bestCategory || 'Technology'
-  }
-
-  private validateCategory(cat: string): boolean {
-    const valid = ['Technology', 'Business', 'Finance', 'Productivity',
-      'Education', 'Career', 'Marketing', 'Health', 'Entertainment', 'Lifestyle']
-    return valid.includes(cat)
   }
 
   private extractTitleFromText(text: string): string | null {
@@ -192,13 +229,11 @@ export class WebsiteAnalyzer {
       tagSet.add(word)
     }
 
-    // Add domain tag
     const domainTag = domain.split('.')[0]
     if (domainTag && domainTag.length > 2) {
       tagSet.add(domainTag)
     }
 
-    // Detect multi-word tech terms
     const lower = source.toLowerCase()
     const phrases = ['machine learning', 'artificial intelligence', 'data science',
       'web development', 'software engineering', 'project management',
@@ -248,27 +283,5 @@ export class WebsiteAnalyzer {
       .filter((s) => s.length > 40 && s.length < 300)
 
     return significant.slice(0, TAKEAWAY_MAX_COUNT)
-  }
-
-  private validateTags(tags: any): string[] {
-    if (!Array.isArray(tags)) return []
-    const seen = new Set<string>()
-    return tags
-      .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-      .map((t) => t.toLowerCase().trim())
-      .filter((t) => {
-        if (seen.has(t)) return false
-        seen.add(t)
-        return true
-      })
-      .slice(0, TAG_MAX_COUNT)
-  }
-
-  private validateTakeaways(takeaways: any): string[] {
-    if (!Array.isArray(takeaways)) return []
-    return takeaways
-      .filter((t): t is string => typeof t === 'string' && t.trim().length > 0)
-      .map((t) => t.trim())
-      .slice(0, TAKEAWAY_MAX_COUNT)
   }
 }
