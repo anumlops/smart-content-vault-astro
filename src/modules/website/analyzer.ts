@@ -28,32 +28,31 @@ export class WebsiteAnalyzer {
     const text = (content.text || '').slice(0, 8000)
     if (!text) return null
 
-    const microserviceUrl = process.env.AI_MICROSERVICE_URL
-    if (microserviceUrl) {
-      try {
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 60000)
-        const response = await fetch(`${microserviceUrl}/api/v1/analyze-llm`, {
-          signal: controller.signal,
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: content.title, content: text }),
-        })
-        clearTimeout(timeout)
-        if (response.ok) {
-          const data = await response.json()
-          return {
-            title: content.title || null,
-            summary: data.summary || null,
-            category: this.detectCategory(content),
-            tags: Array.isArray(data.tags) ? data.tags.slice(0, 5) : [],
-            keyTakeaways: this.generateTakeaways(text),
-            processedAt: new Date().toISOString(),
-          }
+    const microserviceUrl = process.env.AI_MICROSERVICE_URL || '/api'
+    const llmEndpoint = `${microserviceUrl}/analyze-llm`
+    try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 60000)
+      const response = await fetch(llmEndpoint, {
+        signal: controller.signal,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: content.title, content: text }),
+      })
+      clearTimeout(timeout)
+      if (response.ok) {
+        const data = await response.json()
+        return {
+          title: content.title || null,
+          summary: data.summary || null,
+          category: this.detectCategory(content),
+          tags: Array.isArray(data.tags) ? data.tags.slice(0, 5) : [],
+          keyTakeaways: this.generateTakeaways(text),
+          processedAt: new Date().toISOString(),
         }
-      } catch {
-        // fall through to direct LLM
       }
+    } catch {
+      // fall through to direct LLM
     }
 
     const apiKey = process.env.LLM_API_KEY
