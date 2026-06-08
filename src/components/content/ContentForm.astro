@@ -31,6 +31,7 @@ const { error } = Astro.props
           class="input-field pl-10"
         />
       </div>
+      <div id="preview" class="hidden mt-3"></div>
     </div>
 
     <div>
@@ -52,3 +53,59 @@ const { error } = Astro.props
     </button>
   </form>
 </div>
+
+<script>
+const input = document.getElementById('url') as HTMLInputElement
+const preview = document.getElementById('preview') as HTMLDivElement
+let debounceTimer: ReturnType<typeof setTimeout>
+
+input.addEventListener('input', () => {
+  clearTimeout(debounceTimer)
+  const url = input.value.trim()
+
+  if (!url.includes('instagram.com')) {
+    preview.classList.add('hidden')
+    return
+  }
+
+  debounceTimer = setTimeout(async () => {
+    preview.innerHTML = '<div class="flex items-center gap-2 text-sm text-text-dim"><svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="80" stroke-dashoffset="60"/></svg>Fetching preview...</div>'
+    preview.classList.remove('hidden')
+
+    try {
+      const resp = await fetch('/api/extract/instagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+      const data = await resp.json()
+      if (!data.success || !data.data) {
+        preview.classList.add('hidden')
+        return
+      }
+
+      const d = data.data
+      preview.innerHTML = `
+        <div class="flex gap-3 p-3 rounded-lg border border-border bg-surface-muted">
+          ${d.thumbnail
+            ? `<img src="${d.thumbnail.replace(/&/g, '&amp;')}" class="w-20 h-20 rounded-lg object-cover shrink-0" alt="" />`
+            : ''
+          }
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-white truncate">${d.title || '(untitled)'}</p>
+            <p class="text-xs text-text-muted mt-0.5 line-clamp-2">${d.description || ''}</p>
+            <div class="flex items-center gap-2 mt-2">
+              <span class="text-xs bg-primary-muted text-primary rounded-full px-2 py-0.5 font-medium">${d.category || 'Other'}</span>
+              ${(d.tags || []).slice(0, 3).map((t: string) =>
+                `<span class="text-xs bg-indigo-900/30 text-indigo-300 rounded-full px-2 py-0.5">${t}</span>`
+              ).join('')}
+            </div>
+          </div>
+        </div>
+      `
+    } catch {
+      preview.classList.add('hidden')
+    }
+  }, 800)
+})
+</script>
