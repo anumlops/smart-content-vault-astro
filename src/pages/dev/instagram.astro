@@ -8,6 +8,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.astro'
 
 <script>
 const API = '/api/extract/instagram'
+const CATEGORIES = [
+  { id: 'life-advice-relationships', label: 'Life Advice & Relationships' },
+  { id: 'courses-learning', label: 'Courses & Learning' },
+  { id: 'exercise-running', label: 'Exercise & Running' },
+]
+let selectedCategory = null
 
 document.addEventListener('DOMContentLoaded', () => {
   const root = document.getElementById('dev-root')
@@ -81,6 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div id="categorySection" class="border border-border rounded-xl overflow-hidden">
+          <div class="bg-surface-muted px-5 py-3 border-b border-border">
+            <h3 class="text-sm font-semibold text-white">Tag Category</h3>
+          </div>
+          <div class="p-5">
+            <p class="text-xs text-text-dim mb-3">Select a category to tag this Instagram content:</p>
+            <div id="categoryBtns" class="flex flex-wrap gap-2"></div>
+            <div id="taggedInfo" class="hidden mt-3 text-xs text-green-400"></div>
           </div>
         </div>
 
@@ -195,6 +212,27 @@ async function run() {
       sizeEl.textContent = `HTML: ${kb} KB`
       sizeEl.className = `text-xs font-mono px-2 py-0.5 rounded-full ${d.htmlSize > 1000000 ? 'text-green-400 bg-green-900/20' : 'text-red-400 bg-red-900/20'}`
     }
+
+    selectedCategory = null
+    const categoryBtns = document.getElementById('categoryBtns')
+    const taggedInfo = document.getElementById('taggedInfo')
+    taggedInfo.classList.add('hidden')
+    categoryBtns.innerHTML = CATEGORIES.map(
+      (c) => `<button class="cat-btn px-4 py-2 rounded-lg text-sm font-medium border transition-colors" data-id="${c.id}">${c.label}</button>`
+    ).join('')
+    categoryBtns.querySelectorAll('.cat-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedCategory = btn.dataset.id
+        categoryBtns.querySelectorAll('.cat-btn').forEach((b) => {
+          b.className = b.dataset.id === selectedCategory
+            ? 'cat-btn px-4 py-2 rounded-lg text-sm font-medium border transition-colors bg-primary text-white border-primary'
+            : 'cat-btn px-4 py-2 rounded-lg text-sm font-medium border transition-colors bg-surface text-text-muted border-border hover:text-white'
+        })
+        const label = CATEGORIES.find((c) => c.id === selectedCategory).label
+        taggedInfo.textContent = `Tagged as: ${label}`
+        taggedInfo.classList.remove('hidden')
+      })
+    })
 
     document.getElementById('rRaw').textContent = JSON.stringify(d, null, 2)
 
