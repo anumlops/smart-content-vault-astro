@@ -1,0 +1,245 @@
+---
+import DashboardLayout from '../layouts/DashboardLayout.astro'
+---
+
+<DashboardLayout title="Instagram">
+  <div id="app-root"></div>
+</DashboardLayout>
+
+<script>
+const CATEGORIES = [
+  { id: 'life-advice-relationships', label: 'Life Advice & Relationships' },
+  { id: 'courses-learning', label: 'Courses & Learning' },
+  { id: 'exercise-running', label: 'Exercise & Running' },
+]
+
+document.addEventListener('DOMContentLoaded', () => {
+  init()
+})
+
+function init() {
+  const root = document.getElementById('app-root')
+  let state = { items: [], filter: 'all', loading: false }
+
+  function render() {
+    const filtered = state.filter === 'all'
+      ? state.items
+      : state.items.filter((i) => i.category === state.filter)
+
+    root.innerHTML = `
+      <div class="max-w-4xl mx-auto space-y-8 pb-12">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-xl font-semibold text-white">Instagram</h1>
+            <p class="text-sm text-text-dim mt-1">Save and organize Instagram Reels and Posts</p>
+          </div>
+        </div>
+
+        <div class="bg-surface-muted border border-border rounded-xl p-5">
+          <label class="block text-sm font-medium text-text-muted mb-2">Instagram URL</label>
+          <div class="flex gap-2">
+            <input id="urlInput" type="url" class="flex-1 bg-surface border border-border rounded-lg px-4 py-2.5 text-sm text-white outline-none focus:border-primary/50" placeholder="https://www.instagram.com/reel/...">
+            <button id="extractBtn" class="bg-primary hover:bg-primary-hover text-white px-5 py-2.5 rounded-lg text-sm font-medium transition-colors shrink-0">Extract</button>
+          </div>
+          <div id="extractStatus" class="text-sm text-blue-400 mt-2"></div>
+          <div id="extractError" class="hidden text-sm text-red-400 mt-2"></div>
+
+          <div id="preview" class="hidden mt-4 border border-border rounded-xl overflow-hidden">
+            <div class="flex gap-4 p-4">
+              <div id="previewThumbWrap" class="hidden w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-surface">
+                <img id="previewThumb" class="w-full h-full object-cover" alt="" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <p id="previewTitle" class="text-sm font-medium text-white"></p>
+                <p id="previewDesc" class="text-xs text-text-muted mt-1 line-clamp-2"></p>
+                <div class="flex items-center gap-2 mt-3">
+                  <select id="categorySelect" class="bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-primary/50">
+                    <option value="unassigned">Unassigned</option>
+                    ${CATEGORIES.map((c) => `<option value="${c.id}">${c.label}</option>`).join('')}
+                  </select>
+                  <button id="saveBtn" class="bg-primary hover:bg-primary-hover text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="filter-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${state.filter === 'all' ? 'bg-primary text-white' : 'bg-surface-muted text-text-muted hover:text-white border border-border'}" data-filter="all">All</button>
+          ${CATEGORIES.map((c) => `
+            <button class="filter-btn px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors ${state.filter === c.id ? 'bg-primary text-white' : 'bg-surface-muted text-text-muted hover:text-white border border-border'}" data-filter="${c.id}">${c.label}</button>
+          `).join('')}
+          ${state.filter !== 'all' ? `<button id="clearFilter" class="text-xs text-text-dim hover:text-white ml-2">Clear</button>` : ''}
+        </div>
+
+        <div id="itemsContainer">
+          ${state.loading ? '<div class="text-sm text-text-dim text-center py-12">Loading...</div>' : ''}
+          ${!state.loading && filtered.length === 0 ? '<div class="text-sm text-text-dim text-center py-12">No saved Instagram content yet</div>' : ''}
+          ${!state.loading && filtered.length > 0 ? `
+            <div class="grid gap-4">
+              ${filtered.map((item) => `
+                <div class="bg-surface-muted border border-border rounded-xl overflow-hidden flex gap-4 p-4" data-id="${item.id}">
+                  ${item.thumbnail ? `<img src="${item.thumbnail}" class="w-24 h-24 rounded-lg object-cover shrink-0" alt="" />` : '<div class="w-24 h-24 rounded-lg bg-surface shrink-0 flex items-center justify-center text-2xl text-text-dim">🎬</div>'}
+                  <div class="min-w-0 flex-1 flex flex-col justify-between">
+                    <div>
+                      <p class="text-sm font-medium text-white truncate">${item.title || 'Untitled'}</p>
+                      <p class="text-xs text-text-muted mt-0.5 line-clamp-2">${item.description || ''}</p>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                      <select class="category-update text-xs bg-surface border border-border rounded-lg px-2 py-1 text-white outline-none focus:border-primary/50" data-id="${item.id}">
+                        <option value="unassigned" ${item.category === 'unassigned' ? 'selected' : ''}>Unassigned</option>
+                        ${CATEGORIES.map((c) => `<option value="${c.id}" ${item.category === c.id ? 'selected' : ''}>${c.label}</option>`).join('')}
+                      </select>
+                      <span class="text-xs text-text-dim">${new Date(item.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `
+
+    document.querySelectorAll('.filter-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.filter = btn.dataset.filter
+        render()
+      })
+    })
+
+    document.getElementById('extractBtn').addEventListener('click', handleExtract)
+
+    const clearBtn = document.getElementById('clearFilter')
+    if (clearBtn) clearBtn.addEventListener('click', () => { state.filter = 'all'; render() })
+
+    const saveBtn = document.getElementById('saveBtn')
+    if (saveBtn) saveBtn.addEventListener('click', handleSave)
+
+    document.querySelectorAll('.category-update').forEach((sel) => {
+      sel.addEventListener('change', handleCategoryUpdate)
+    })
+  }
+
+  async function fetchItems() {
+    state.loading = true
+    render()
+
+    try {
+      const params = state.filter !== 'all' ? `?category=${state.filter}` : ''
+      const resp = await fetch(`/api/content/instagram${params}`)
+      const data = await resp.json()
+      state.items = data.items || []
+    } catch {
+      state.items = []
+    }
+
+    state.loading = false
+    render()
+  }
+
+  let lastPreviewData = null
+
+  async function handleExtract() {
+    const url = document.getElementById('urlInput').value.trim()
+    if (!url) return
+
+    const btn = document.getElementById('extractBtn')
+    const status = document.getElementById('extractStatus')
+    const error = document.getElementById('extractError')
+    const preview = document.getElementById('preview')
+
+    btn.disabled = true
+    status.textContent = 'Extracting...'
+    error.classList.add('hidden')
+    preview.classList.add('hidden')
+
+    try {
+      const ac = new AbortController()
+      setTimeout(() => ac.abort(), 15000)
+
+      const resp = await fetch('/api/extract/instagram', {
+        signal: ac.signal,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!resp.ok) throw new Error('Extraction failed')
+
+      const data = await resp.json()
+      if (!data.success) throw new Error(data.error || 'Extraction failed')
+
+      lastPreviewData = data.data
+
+      const d = data.data
+      document.getElementById('previewTitle').textContent = d.title || '(untitled)'
+      document.getElementById('previewDesc').textContent = d.description || ''
+
+      const thumbWrap = document.getElementById('previewThumbWrap')
+      if (d.thumbnail) {
+        document.getElementById('previewThumb').src = d.thumbnail
+        thumbWrap.classList.remove('hidden')
+      } else {
+        thumbWrap.classList.add('hidden')
+      }
+
+      preview.classList.remove('hidden')
+      status.textContent = ''
+    } catch (e) {
+      error.textContent = e.message
+      error.classList.remove('hidden')
+    } finally {
+      btn.disabled = false
+    }
+  }
+
+  async function handleSave() {
+    const url = document.getElementById('urlInput').value.trim()
+    const category = document.getElementById('categorySelect').value
+    const saveBtn = document.getElementById('saveBtn')
+    const status = document.getElementById('extractStatus')
+
+    saveBtn.disabled = true
+    status.textContent = 'Saving...'
+
+    try {
+      const resp = await fetch('/api/content/instagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, category }),
+      })
+
+      if (!resp.ok) throw new Error('Save failed')
+
+      status.textContent = 'Saved!'
+      document.getElementById('urlInput').value = ''
+      document.getElementById('preview').classList.add('hidden')
+      lastPreviewData = null
+      await fetchItems()
+    } catch {
+      status.textContent = 'Save failed'
+    } finally {
+      saveBtn.disabled = false
+    }
+  }
+
+  async function handleCategoryUpdate(e) {
+    const id = e.target.dataset.id
+    const category = e.target.value
+
+    try {
+      await fetch('/api/content/instagram', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, category }),
+      })
+      await fetchItems()
+    } catch {
+      e.target.value = state.items.find((i) => i.id === id)?.category || 'unassigned'
+    }
+  }
+
+  fetchItems()
+}
+</script>
