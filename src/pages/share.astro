@@ -1,0 +1,77 @@
+---
+import { processContent } from '../lib/processing'
+import { verifySession } from '../lib/auth'
+import { enrichContent } from '../lib/enrich'
+import { prisma } from '../lib/prisma'
+
+const session = Astro.cookies.get('session')?.value
+
+if (!session || !verifySession(session)) {
+  return Astro.redirect('/login?redirect=/share?' + Astro.url.searchParams.toString())
+}
+
+const payload = verifySession(session)!
+
+const urlParam = Astro.url.searchParams.get('url')
+const textParam = Astro.url.searchParams.get('text')
+const sharedUrl = urlParam || textParam || ''
+
+if (!sharedUrl) {
+  return Astro.redirect('/dashboard?error=No URL shared')
+}
+
+let targetUrl = sharedUrl.trim()
+if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+  targetUrl = 'https://' + targetUrl
+}
+
+try {
+  new URL(targetUrl)
+} catch {
+  return Astro.redirect('/dashboard?error=Invalid shared URL')
+}
+
+try {
+  const processed = await processContent(targetUrl)
+  const content = await prisma.savedContent.create({
+    data: {
+      userId: payload.userId,
+      originalUrl: processed.originalUrl,
+      normalizedUrl: processed.normalizedUrl,
+      sourceDomain: processed.sourceDomain,
+      contentType: processed.contentType,
+      title: processed.title,
+      description: processed.description,
+      thumbnailUrl: processed.thumbnailUrl,
+      faviconUrl: processed.faviconUrl,
+      author: processed.author,
+      publisher: processed.publisher,
+      publishedAt: processed.publishedAt,
+      category: processed.category,
+      enrichmentStatus: processed.enrichmentStatus,
+      tags: {
+        create: await Promise.all(
+          processed.tags.map(async (tagName) => {
+            const slug = tagName.toLowerCase().replace(/[^a-z0-9-]/g, '')
+            const tag = await prisma.tag.upsert({
+              where: { slug },
+              update: {},
+              create: { name: tagName, slug },
+            })
+            return { tagId: tag.id }
+          })
+        ),
+      },
+    },
+  })
+
+  enrichContent(content.id, processed.originalUrl).catch(() => {})
+
+  return Astro.redirect(`/content/${content.id}`)
+} catch {
+  return Astro.redirect('/dashboard?error=Failed to save shared content')
+}
+---
+
+<!-- fallback content if redirect doesn't happen -->
+<p>Redirecting...</p>
