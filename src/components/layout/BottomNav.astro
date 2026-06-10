@@ -5,7 +5,6 @@ const navItems = [
   { href: '/search', label: 'Search', icon: 'search' },
   { href: '/timeline', label: 'Timeline', icon: 'timeline' },
   { href: '/profile', label: 'Profile', icon: 'profile' },
-  { href: '/dev', label: 'Dev', icon: 'dev' },
 ]
 const currentPath = Astro.url.pathname
 ---
@@ -44,11 +43,6 @@ const currentPath = Astro.url.pathname
           {item.icon === 'profile' && (
             <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          )}
-          {item.icon === 'dev' && (
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
             </svg>
           )}
           <span>{item.label}</span>

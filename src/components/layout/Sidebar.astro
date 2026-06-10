@@ -6,7 +6,6 @@ const navItems = [
   { href: '/search', label: 'Search', icon: 'search' },
   { href: '/timeline', label: 'Timeline', icon: 'timeline' },
   { href: '/profile', label: 'Profile', icon: 'profile' },
-  { href: '/dev', label: 'Dev', icon: 'dev' },
 ]
 ---
 
@@ -32,7 +31,6 @@ const navItems = [
           {item.icon === 'search' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>}
           {item.icon === 'timeline' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
           {item.icon === 'profile' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>}
-          {item.icon === 'dev' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>}
         </span>
         {item.label}
       </a>
