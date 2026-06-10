@@ -44,24 +44,24 @@ const { error } = Astro.props
       ></textarea>
     </div>
 
-    <div id="instagramCategoryWrap" class="hidden">
-      <label class="block text-sm font-medium text-text-muted mb-2">Instagram Category</label>
-      <div id="instagramCategoryBtns" class="flex flex-wrap gap-2">
-        <label class="cat-option cursor-pointer">
+    <div>
+      <label class="block text-sm font-medium text-text-muted mb-2">Category <span class="text-xs text-text-dim font-normal">(for Instagram content)</span></label>
+      <div class="flex flex-wrap gap-2">
+        <label class="cursor-pointer">
           <input type="radio" name="category" value="unassigned" checked class="hidden">
-          <span class="block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Unassigned</span>
+          <span class="cat-label block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Unassigned</span>
         </label>
-        <label class="cat-option cursor-pointer">
+        <label class="cursor-pointer">
           <input type="radio" name="category" value="life-advice-relationships" class="hidden">
-          <span class="block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Life Advice & Relationships</span>
+          <span class="cat-label block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Life Advice & Relationships</span>
         </label>
-        <label class="cat-option cursor-pointer">
+        <label class="cursor-pointer">
           <input type="radio" name="category" value="courses-learning" class="hidden">
-          <span class="block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Courses & Learning</span>
+          <span class="cat-label block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Courses & Learning</span>
         </label>
-        <label class="cat-option cursor-pointer">
+        <label class="cursor-pointer">
           <input type="radio" name="category" value="exercise-running" class="hidden">
-          <span class="block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Exercise & Running</span>
+          <span class="cat-label block px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors">Exercise & Running</span>
         </label>
       </div>
     </div>
@@ -76,27 +76,13 @@ const { error } = Astro.props
 </div>
 
 <script>
-const urlInput = document.getElementById('url')
-const catWrap = document.getElementById('instagramCategoryWrap')
-const catRadios = document.querySelectorAll('input[name="category"]')
-
-urlInput.addEventListener('input', () => {
-  const val = urlInput.value.trim().toLowerCase()
-  if (/instagram\.com\/(reel|p)\//.test(val)) {
-    catWrap.classList.remove('hidden')
-  } else {
-    catWrap.classList.add('hidden')
-    catRadios.forEach((r) => { if (r.value === 'unassigned') r.checked = true })
-  }
-})
-
-document.querySelectorAll('.cat-option input').forEach((radio) => {
+document.querySelectorAll('input[name="category"]').forEach((radio) => {
   radio.addEventListener('change', () => {
-    document.querySelectorAll('.cat-option span').forEach((s) => {
-      s.className = 'block px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-surface text-text-muted border-border'
+    document.querySelectorAll('.cat-label').forEach((s) => {
+      s.className = 'cat-label block px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-surface text-text-muted border-border'
     })
     if (radio.checked && radio.value !== 'unassigned') {
-      radio.parentElement.querySelector('span').className = 'block px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-primary text-white border-primary'
+      radio.parentElement.querySelector('.cat-label').className = 'cat-label block px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-primary text-white border-primary'
     }
   })
 })
