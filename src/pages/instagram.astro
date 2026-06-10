@@ -52,12 +52,13 @@ function init() {
               <div class="min-w-0 flex-1">
                 <p id="previewTitle" class="text-sm font-medium text-white"></p>
                 <p id="previewDesc" class="text-xs text-text-muted mt-1 line-clamp-2"></p>
-                <div class="flex items-center gap-2 mt-3">
-                  <select id="categorySelect" class="bg-surface border border-border rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-primary/50">
-                    <option value="unassigned">Unassigned</option>
-                    ${CATEGORIES.map((c) => `<option value="${c.id}">${c.label}</option>`).join('')}
-                  </select>
-                  <button id="saveBtn" class="bg-primary hover:bg-primary-hover text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors">Save</button>
+                <div class="mt-3">
+                  <div class="text-xs text-text-dim mb-2">Tag category:</div>
+                  <div id="previewCatBtns" class="flex flex-wrap gap-2">
+                    <button class="cat-btn-preview px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors" data-value="unassigned">Unassigned</button>
+                    ${CATEGORIES.map((c) => `<button class="cat-btn-preview px-3 py-1.5 rounded-lg text-xs font-medium border border-border bg-surface text-text-muted transition-colors" data-value="${c.id}">${c.label}</button>`).join('')}
+                  </div>
+                  <button id="saveBtn" class="mt-3 bg-primary hover:bg-primary-hover text-white px-4 py-1.5 rounded-lg text-xs font-medium transition-colors">Save</button>
                 </div>
               </div>
             </div>
@@ -85,12 +86,13 @@ function init() {
                       <p class="text-sm font-medium text-white truncate">${item.title || 'Untitled'}</p>
                       <p class="text-xs text-text-muted mt-0.5 line-clamp-2">${item.description || ''}</p>
                     </div>
-                    <div class="flex items-center gap-2 mt-2">
-                      <select class="category-update text-xs bg-surface border border-border rounded-lg px-2 py-1 text-white outline-none focus:border-primary/50" data-id="${item.id}">
-                        <option value="unassigned" ${item.category === 'unassigned' ? 'selected' : ''}>Unassigned</option>
-                        ${CATEGORIES.map((c) => `<option value="${c.id}" ${item.category === c.id ? 'selected' : ''}>${c.label}</option>`).join('')}
-                      </select>
-                      <span class="text-xs text-text-dim">${new Date(item.createdAt).toLocaleDateString()}</span>
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                      <span class="text-xs text-text-dim">Tag:</span>
+                      <button class="cat-btn-item px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${item.category === 'unassigned' || !item.category ? 'bg-primary text-white border-primary' : 'bg-surface text-text-muted border-border hover:text-white'}" data-id="${item.id}" data-value="unassigned">Unassigned</button>
+                      ${CATEGORIES.map((c) => `
+                        <button class="cat-btn-item px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${item.category === c.id ? 'bg-primary text-white border-primary' : 'bg-surface text-text-muted border-border hover:text-white'}" data-id="${item.id}" data-value="${c.id}">${c.label}</button>
+                      `).join('')}
+                      <span class="text-xs text-text-dim ml-auto">${new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -116,8 +118,24 @@ function init() {
     const saveBtn = document.getElementById('saveBtn')
     if (saveBtn) saveBtn.addEventListener('click', handleSave)
 
-    document.querySelectorAll('.category-update').forEach((sel) => {
-      sel.addEventListener('change', handleCategoryUpdate)
+    document.querySelectorAll('.cat-btn-preview').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        previewSelectedCategory = btn.dataset.value
+        document.querySelectorAll('.cat-btn-preview').forEach((b) => {
+          b.className = `cat-btn-preview px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${b.dataset.value === previewSelectedCategory ? 'bg-primary text-white border-primary' : 'bg-surface text-text-muted border-border'}`
+        })
+      })
+    })
+
+    document.querySelectorAll('.cat-btn-item').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id
+        const value = btn.dataset.value
+        document.querySelectorAll(`.cat-btn-item[data-id="${id}"]`).forEach((b) => {
+          b.className = `cat-btn-item px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${b.dataset.value === value ? 'bg-primary text-white border-primary' : 'bg-surface text-text-muted border-border hover:text-white'}`
+        })
+        handleCategoryUpdate(id, value)
+      })
     })
   }
 
@@ -139,6 +157,7 @@ function init() {
   }
 
   let lastPreviewData = null
+  let previewSelectedCategory = 'unassigned'
 
   async function handleExtract() {
     const url = document.getElementById('urlInput').value.trim()
@@ -196,7 +215,7 @@ function init() {
 
   async function handleSave() {
     const url = document.getElementById('urlInput').value.trim()
-    const category = document.getElementById('categorySelect').value
+    const category = previewSelectedCategory
     const saveBtn = document.getElementById('saveBtn')
     const status = document.getElementById('extractStatus')
 
@@ -224,10 +243,7 @@ function init() {
     }
   }
 
-  async function handleCategoryUpdate(e) {
-    const id = e.target.dataset.id
-    const category = e.target.value
-
+  async function handleCategoryUpdate(id, category) {
     try {
       await fetch('/api/content/instagram', {
         method: 'POST',
@@ -236,7 +252,7 @@ function init() {
       })
       await fetchItems()
     } catch {
-      e.target.value = state.items.find((i) => i.id === id)?.category || 'unassigned'
+      // silently fail
     }
   }
 
