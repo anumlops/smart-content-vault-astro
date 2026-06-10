@@ -84,7 +84,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     await enrichContent(content.id, processed.originalUrl).catch(() => {})
 
-    return new Response(JSON.stringify({ id: content.id }), {
+    const responseData: any = { id: content.id }
+
+    if (processed.contentType === 'instagram') {
+      responseData.category = finalCategory
+      responseData.availableCategories = INSTAGRAM_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))
+      responseData.thumbnail = processed.thumbnailUrl
+      responseData.title = processed.title
+      responseData.description = processed.description
+    }
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
