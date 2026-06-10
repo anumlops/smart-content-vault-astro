@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-semibold text-white">Instagram Extractor</h1>
-          <p class="text-sm text-text-dim mt-1">Paste an Instagram Reel or Post URL to extract metadata, tags, and category</p>
+          <p class="text-sm text-text-dim mt-1">Paste an Instagram Reel or Post URL to validate OG metadata extraction</p>
         </div>
         <a href="/dev" class="flex items-center gap-1.5 text-sm text-text-muted hover:text-white bg-surface-muted hover:bg-surface-elevated border border-border rounded-lg px-3 py-2 transition-colors">
           Website Enrichment
@@ -36,47 +36,46 @@ document.addEventListener('DOMContentLoaded', () => {
       <div id="result" class="hidden space-y-6">
         <div class="border border-border rounded-xl overflow-hidden">
           <div class="bg-surface-muted px-5 py-3 border-b border-border">
-            <h3 class="text-sm font-semibold text-white">Content Metadata</h3>
+            <h3 class="text-sm font-semibold text-white">Open Graph Metadata</h3>
           </div>
           <div class="p-5 space-y-4">
             <div id="rThumbnailWrap" class="hidden -mx-5 -mt-5 mb-4">
               <img id="rThumbnail" class="w-full max-h-80 object-cover" alt="Thumbnail" />
             </div>
             <div>
-              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Title</label>
+              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">og:title</label>
               <p id="rTitle" class="text-base text-white mt-1"></p>
             </div>
             <div>
-              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Description</label>
+              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">og:description</label>
               <p id="rDescription" class="text-sm text-text-muted mt-1 leading-relaxed whitespace-pre-line"></p>
             </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Platform</label>
-                <p class="text-sm text-text-muted mt-1">Instagram</p>
-              </div>
-              <div>
-                <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Category</label>
-                <p id="rCategory" class="text-sm text-text-muted mt-1"></p>
-              </div>
-              <div class="col-span-2">
-                <label class="text-xs font-medium text-text-dim uppercase tracking-wider">URL</label>
-                <p id="rUrl" class="text-sm text-text-muted mt-1 truncate"></p>
-              </div>
-              <div>
-                <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Extracted At</label>
-                <p id="rTime" class="text-sm text-text-muted mt-1"></p>
-              </div>
+            <div>
+              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">URL</label>
+              <p id="rUrl" class="text-sm text-text-muted mt-1 truncate"></p>
             </div>
-          </div>
-        </div>
-
-        <div class="border border-border rounded-xl overflow-hidden">
-          <div class="bg-surface-muted px-5 py-3 border-b border-border">
-            <h3 class="text-sm font-semibold text-white">Tags</h3>
-          </div>
-          <div class="p-5">
-            <div id="rTags" class="flex flex-wrap gap-2"></div>
+            <div>
+              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Canonical URL</label>
+              <p id="rCanonical" class="text-sm text-text-muted mt-1 truncate"></p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-text-dim uppercase tracking-wider">Extracted At</label>
+              <p id="rTime" class="text-sm text-text-muted mt-1"></p>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+              <span class="inline-flex items-center gap-1.5 text-xs text-text-dim">
+                <span id="rHasTitle" class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                og:title
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-xs text-text-dim">
+                <span id="rHasDesc" class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                og:description
+              </span>
+              <span class="inline-flex items-center gap-1.5 text-xs text-text-dim">
+                <span id="rHasImage" class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                og:image
+              </span>
+            </div>
           </div>
         </div>
 
@@ -89,6 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
             <pre id="rRaw" class="text-xs text-text-dim bg-surface border border-border rounded-lg p-4 overflow-x-auto max-h-96 leading-relaxed"></pre>
           </div>
         </details>
+
+        <div class="border border-border rounded-xl p-4 bg-surface-muted">
+          <p class="text-sm text-text-dim">
+            <strong class="text-white">Validation note:</strong>
+            If og:title is empty, Instagram likely detected the request as non-browser.
+            Check that all <code class="text-xs bg-surface px-1.5 py-0.5 rounded">Sec-Fetch-*</code> headers are present.
+          </p>
+        </div>
       </div>
     </div>
   `
@@ -107,7 +114,7 @@ async function run() {
   const result = document.getElementById('result')
 
   btn.disabled = true
-  status.textContent = 'Fetching and extracting...'
+  status.textContent = 'Fetching HTML and extracting OG metadata...'
   error.classList.add('hidden')
   result.classList.add('hidden')
 
@@ -141,30 +148,27 @@ async function run() {
 
     const d = data.data
 
-    document.getElementById('rTitle').textContent = d.title || '(untitled)'
-    document.getElementById('rUrl').textContent = d.url || d.canonical_url || ''
-    document.getElementById('rCategory').textContent = d.category || '—'
-    document.getElementById('rTime').textContent = d.extracted_at ? new Date(d.extracted_at).toLocaleString() : '—'
+    document.getElementById('rTitle').textContent = d.ogTitle || '(empty)'
+    document.getElementById('rDescription').textContent = d.ogDescription || '(empty)'
+    document.getElementById('rUrl').textContent = d.ogUrl || d.url || ''
+    document.getElementById('rCanonical').textContent = d.canonicalUrl || '(none)'
+    document.getElementById('rTime').textContent = d.extractedAt ? new Date(d.extractedAt).toLocaleString() : '—'
 
     const thumbWrap = document.getElementById('rThumbnailWrap')
-    if (d.thumbnail) {
-      document.getElementById('rThumbnail').src = d.thumbnail
+    if (d.ogImage) {
+      document.getElementById('rThumbnail').src = d.ogImage
       thumbWrap.classList.remove('hidden')
     } else {
       thumbWrap.classList.add('hidden')
     }
 
-    document.getElementById('rDescription').textContent = d.description || '—'
-
-    const tagsEl = document.getElementById('rTags')
-    tagsEl.innerHTML = ''
-    if (d.tags?.length) {
-      tagsEl.innerHTML = d.tags.map(t =>
-        `<span class="bg-indigo-900/40 text-indigo-300 border border-indigo-800/40 rounded-full px-3 py-1.5 text-xs font-medium">${t}</span>`
-      ).join(' ')
-    } else {
-      tagsEl.innerHTML = '<span class="text-text-dim text-sm">No tags generated</span>'
+    const setDot = (id, has) => {
+      const el = document.getElementById(id)
+      el.className = `w-2 h-2 rounded-full inline-block ${has ? 'bg-green-500' : 'bg-red-500'}`
     }
+    setDot('rHasTitle', !!d.ogTitle)
+    setDot('rHasDesc', !!d.ogDescription)
+    setDot('rHasImage', !!d.ogImage)
 
     document.getElementById('rRaw').textContent = JSON.stringify(d, null, 2)
 

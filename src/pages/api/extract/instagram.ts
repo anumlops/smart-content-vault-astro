@@ -1,32 +1,15 @@
 import type { APIRoute } from 'astro'
-import { categorize } from '../../../lib/categorizer'
-import { generateTags } from '../../../lib/tag-generator'
-import { decodeHtmlEntities, getDomain } from '../../../lib/utils'
-
-function extractMetaAttribute(html: string, property: string, attr: string): string {
-  const propIdx = html.indexOf(`property="` + property + `"`)
-  if (propIdx === -1) return ''
-  const attrIdx = html.indexOf(` ` + attr + `="`, propIdx)
-  if (attrIdx === -1) return ''
-  const start = attrIdx + attr.length + 3
-  const end = html.indexOf(`"`, start)
-  if (end === -1) return ''
-  return html.substring(start, end)
-}
+import { decodeHtmlEntities } from '../../../lib/utils'
 
 function extractMetaContent(html: string, property: string): string {
-  return decodeHtmlEntities(extractMetaAttribute(html, property, 'content'))
-}
-
-function extractTagContent(html: string, tag: string): string {
-  const open = `<${tag}`
-  const openIdx = html.indexOf(open)
-  if (openIdx === -1) return ''
-  const closeIdx = html.indexOf(`>`, openIdx)
-  if (closeIdx === -1) return ''
-  const endIdx = html.indexOf(`</${tag}>`, closeIdx)
-  if (endIdx === -1) return ''
-  return html.substring(closeIdx + 1, endIdx).trim()
+  const propIdx = html.indexOf(`property="` + property + `"`)
+  if (propIdx === -1) return ''
+  const contentIdx = html.indexOf(` content="`, propIdx)
+  if (contentIdx === -1) return ''
+  const start = contentIdx + 10
+  const end = html.indexOf(`"`, start)
+  if (end === -1) return ''
+  return decodeHtmlEntities(html.substring(start, end))
 }
 
 function extractLinkHref(html: string, rel: string): string {
@@ -40,32 +23,8 @@ function extractLinkHref(html: string, rel: string): string {
   return html.substring(start, end)
 }
 
-function extractMetaNameContent(html: string, name: string): string {
-  const nameIdx = html.indexOf(`name="` + name + `"`)
-  if (nameIdx === -1) return ''
-  const contentIdx = html.indexOf(`content="`, nameIdx)
-  if (contentIdx === -1) return ''
-  const start = contentIdx + 9
-  const end = html.indexOf(`"`, start)
-  if (end === -1) return ''
-  return decodeHtmlEntities(html.substring(start, end))
-}
-
-interface InstagramMetadata {
-  title: string
-  description: string
-  image: string
-  url: string
-  canonicalUrl: string
-  pageTitle: string
-  metaDescription: string
-}
-
-async function fetchInstagramMetadata(url: string): Promise<InstagramMetadata> {
-  const empty: InstagramMetadata = {
-    title: '', description: '', image: '', url,
-    canonicalUrl: '', pageTitle: '', metaDescription: '',
-  }
+async function fetchInstagramOG(url: string) {
+  const empty = { ogTitle: '', ogDescription: '', ogImage: '', ogUrl: '', canonicalUrl: '' }
 
   try {
     const controller = new AbortController()
@@ -95,13 +54,11 @@ async function fetchInstagramMetadata(url: string): Promise<InstagramMetadata> {
     if (!html) return empty
 
     return {
-      title: extractMetaContent(html, 'og:title'),
-      description: extractMetaContent(html, 'og:description'),
-      image: extractMetaContent(html, 'og:image'),
-      url: extractMetaContent(html, 'og:url') || url,
+      ogTitle: extractMetaContent(html, 'og:title'),
+      ogDescription: extractMetaContent(html, 'og:description'),
+      ogImage: extractMetaContent(html, 'og:image'),
+      ogUrl: extractMetaContent(html, 'og:url') || url,
       canonicalUrl: extractLinkHref(html, 'canonical'),
-      pageTitle: decodeHtmlEntities(extractTagContent(html, 'title')),
-      metaDescription: extractMetaNameContent(html, 'description'),
     }
   } catch {
     return empty
@@ -111,48 +68,45 @@ async function fetchInstagramMetadata(url: string): Promise<InstagramMetadata> {
 export const POST: APIRoute = async ({ request }) => {
   try {
     const body = await request.json()
-    const url = body.url?.toString().trim()
+    const rawUrl = body.url?.toString().trim()
 
-    if (!url) {
+    if (!rawUrl) {
       return new Response(JSON.stringify({ success: false, error: 'URL is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    let validUrl = url
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      validUrl = 'https://' + url
+    const url = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl
+
+    let hostname: string
+    try { hostname = new URL(url).hostname.replace('www.', '') } catch {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid URL' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
-    const domain = getDomain(validUrl)
-    if (!/instagram\.com/i.test(domain)) {
+    if (!/instagram\.com/i.test(hostname)) {
       return new Response(JSON.stringify({ success: false, error: 'Not an Instagram URL' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    const meta = await fetchInstagramMetadata(validUrl)
-
-    const titleText = meta.title || meta.pageTitle || validUrl
-    const description = meta.description || meta.metaDescription || ''
-    const category = categorize(titleText, validUrl)
-    const tags = generateTags(titleText, validUrl)
+    const og = await fetchInstagramOG(url)
 
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          platform: 'instagram',
-          url: validUrl,
-          canonical_url: meta.canonicalUrl || validUrl,
-          title: meta.title || meta.pageTitle || '',
-          description,
-          thumbnail: meta.image || '',
-          extracted_at: new Date().toISOString(),
-          category,
-          tags,
+          url,
+          ogTitle: og.ogTitle,
+          ogDescription: og.ogDescription,
+          ogImage: og.ogImage,
+          ogUrl: og.ogUrl,
+          canonicalUrl: og.canonicalUrl,
+          extractedAt: new Date().toISOString(),
         },
       }),
       { status: 200, headers: { 'Content-Type': 'application/json' } }
