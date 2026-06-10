@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma'
 import { processContent } from '../../../lib/processing'
 import { enrichContent } from '../../../lib/enrich'
 import { verifySession } from '../../../lib/auth'
+import { INSTAGRAM_CATEGORIES } from '../../../modules/instagram/categories'
 
 export const GET: APIRoute = async ({ cookies, url }) => {
   const session = cookies.get('session')?.value
@@ -68,12 +69,18 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
   try {
     const formData = await request.formData()
     const url = formData.get('url')?.toString()
+    const categoryOverride = formData.get('category')?.toString().trim()
 
     if (!url) {
       return redirect('/content/new?error=URL is required')
     }
 
     const processed = await processContent(url)
+
+    const validInstagramCats = INSTAGRAM_CATEGORIES.map((c) => c.id)
+    const finalCategory = processed.contentType === 'instagram' && categoryOverride && validInstagramCats.includes(categoryOverride)
+      ? categoryOverride
+      : processed.category
 
     const content = await prisma.savedContent.create({
       data: {
@@ -89,7 +96,7 @@ export const POST: APIRoute = async ({ request, cookies, redirect }) => {
         author: processed.author,
         publisher: processed.publisher,
         publishedAt: processed.publishedAt,
-        category: processed.category,
+        category: finalCategory,
         enrichmentStatus: processed.enrichmentStatus,
         tags: {
           create: await Promise.all(

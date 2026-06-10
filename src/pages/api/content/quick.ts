@@ -3,6 +3,7 @@ import { prisma } from '../../../lib/prisma'
 import { processContent } from '../../../lib/processing'
 import { enrichContent } from '../../../lib/enrich'
 import { verifySession } from '../../../lib/auth'
+import { INSTAGRAM_CATEGORIES } from '../../../modules/instagram/categories'
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const session = cookies.get('session')?.value
@@ -24,6 +25,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
   try {
     const body = await request.json()
     const url = body.url?.toString()
+    const categoryOverride = body.category?.toString().trim()
 
     if (!url) {
       return new Response(JSON.stringify({ error: 'URL is required' }), {
@@ -43,6 +45,11 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     const processed = await processContent(url)
 
+    const validInstagramCats = INSTAGRAM_CATEGORIES.map((c) => c.id)
+    const finalCategory = processed.contentType === 'instagram' && categoryOverride && validInstagramCats.includes(categoryOverride)
+      ? categoryOverride
+      : processed.category
+
     const content = await prisma.savedContent.create({
       data: {
         userId: payload.userId,
@@ -57,7 +64,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
         author: processed.author,
         publisher: processed.publisher,
         publishedAt: processed.publishedAt,
-        category: processed.category,
+        category: finalCategory,
         enrichmentStatus: processed.enrichmentStatus,
         tags: {
           create: await Promise.all(

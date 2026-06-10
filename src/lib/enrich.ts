@@ -1,5 +1,6 @@
 import { prisma } from './prisma'
 import { WebsiteProcessor } from '../modules/website/service'
+import { InstagramProcessor } from '../modules/instagram/service'
 
 export async function enrichContent(contentId: string, url: string): Promise<void> {
   try {
@@ -8,7 +9,8 @@ export async function enrichContent(contentId: string, url: string): Promise<voi
       data: { enrichmentStatus: 'processing' },
     })
 
-    const processor = new WebsiteProcessor()
+    const processors = [new InstagramProcessor(), new WebsiteProcessor()]
+    const processor = processors.find((p) => p.canHandle(url)) || new WebsiteProcessor()
     const result = await processor.processUrl(url)
 
     await prisma.savedContent.update({

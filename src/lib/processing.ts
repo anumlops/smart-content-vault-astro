@@ -1,6 +1,9 @@
 import { getDomain, normalizeUrl, getContentType, decodeHtmlEntities } from './utils'
 import { categorize } from './categorizer'
 import { generateTags } from './tag-generator'
+import { InstagramCrawler } from '../modules/instagram/crawler'
+
+const instagramCrawler = new InstagramCrawler()
 
 interface MetadataResult {
   title: string | null
@@ -21,6 +24,16 @@ async function extractMetadata(url: string): Promise<MetadataResult> {
     author: null,
     publisher: null,
     publishedAt: null,
+  }
+
+  if (instagramCrawler.canHandle(url)) {
+    const result = await instagramCrawler.extract(url)
+    if (!result.error) {
+      metadata.title = result.title
+      metadata.description = result.description
+      metadata.thumbnailUrl = result.thumbnail
+    }
+    return metadata
   }
 
   try {
