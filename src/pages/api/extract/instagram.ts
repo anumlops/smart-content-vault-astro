@@ -24,7 +24,7 @@ function extractLinkHref(html: string, rel: string): string {
 }
 
 async function fetchInstagramOG(url: string) {
-  const empty = { ogTitle: '', ogDescription: '', ogImage: '', ogUrl: '', canonicalUrl: '' }
+  const empty = { ogTitle: '', ogDescription: '', ogImage: '', ogUrl: '', canonicalUrl: '', htmlSize: 0 }
 
   try {
     const controller = new AbortController()
@@ -59,6 +59,7 @@ async function fetchInstagramOG(url: string) {
       ogImage: extractMetaContent(html, 'og:image'),
       ogUrl: extractMetaContent(html, 'og:url') || url,
       canonicalUrl: extractLinkHref(html, 'canonical'),
+      htmlSize: html.length,
     }
   } catch {
     return empty
