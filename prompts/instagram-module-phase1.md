@@ -6,7 +6,7 @@ Build a complete Instagram extraction module following the same architecture as 
 
 ## Project Context
 
-This is **Smart Content Vault** — an Astro v6 SSR app on Vercel that saves and organizes content from any URL.
+This is **Limo** — an Astro v6 SSR app on Vercel that saves and organizes content from any URL.
 
 ### Stack
 - **Astro v6 SSR** (`output: 'server'`) deployed on Vercel with `@astrojs/vercel`

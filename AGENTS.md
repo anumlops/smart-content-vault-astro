@@ -1,4 +1,4 @@
-# Smart Content Vault — AGENTS.md
+# Limo — AGENTS.md
 
 ## Stack
 
@@ -7,6 +7,7 @@
 - Prisma v5 + PostgreSQL (Neon)
 - Session auth via httpOnly cookies (custom SHA-256 + base64 tokens; `better-auth` dep is unused)
 - **Node >=22.12.0** (`.nvmrc` says 20, but `package.json` engines wins)
+- PWA share target: Share URLs from any app → PWA → auto-save
 
 ## Commands
 
@@ -36,7 +37,6 @@ No test, lint, or typecheck scripts exist. `postinstall` auto-runs `prisma gener
 `src/modules/` implements `ContentProcessor` interface (`shared/types.ts`). Only `website/` is implemented; `youtube/` and `instagram/` are placeholders.
 
 ### Microservices (independent, not connected to the main app)
-- `microservices/crawl4ai/` — Python web crawler
 - `microservices/content-extractor/` — Python
 - `microservices/website-intelligence-service/` — Node
 

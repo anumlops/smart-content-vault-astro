@@ -12,7 +12,7 @@
 
 ```bash
 git clone <repo-url>
-cd smart-content-vault
+cd limo
 npm install
 ```
 

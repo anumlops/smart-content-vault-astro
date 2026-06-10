@@ -2,7 +2,7 @@
 
 ## Overview
 
-Smart Content Vault is built with AstroJS as a server-rendered application with REST API endpoints. The architecture follows a layered approach:
+Limo is built with AstroJS as a server-rendered application with REST API endpoints. The architecture follows a layered approach:
 
 ```
 User Layer → Presentation Layer → API Layer → Service Layer → Data Layer

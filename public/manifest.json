@@ -1,7 +1,7 @@
 {
-  "name": "Smart Content Vault",
-  "short_name": "SCVault",
-  "description": "Save. Organize. Rediscover. Your personal knowledge bookmarking platform.",
+  "name": "Limo",
+  "short_name": "Limo",
+  "description": "Linked Memory. Save. Organize. Rediscover.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#0b0d11",

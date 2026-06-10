@@ -43,7 +43,7 @@ async function extractMetadata(url: string): Promise<MetadataResult> {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SmartContentVault/1.0)',
+        'User-Agent': 'Mozilla/5.0 (compatible; Limo/1.0)',
         'Accept': 'text/html, application/xhtml+xml',
       },
     })

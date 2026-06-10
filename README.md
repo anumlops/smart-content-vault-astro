@@ -1,14 +1,14 @@
-# Smart Content Vault
+# Limo
 
-**Save. Organize. Rediscover.**
+**Linked Memory. Save. Organize. Rediscover.**
 
 A personal knowledge bookmarking platform. Save content from across the internet, organize it automatically, and rediscover it later.
 
-## Why Smart Content Vault
+## Why Limo
 
 People consume enormous amounts of online content daily — YouTube videos, articles, documentation, GitHub repositories, Instagram posts, and more. Valuable information gets lost in browser tabs, forgotten bookmarks, and endless scroll.
 
-Smart Content Vault solves this by providing a central place to:
+Limo solves this by providing a central place to:
 
 - **Capture** content instantly with a single link
 - **Organize** automatically using smart categories and tags

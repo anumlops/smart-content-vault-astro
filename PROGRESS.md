@@ -1,4 +1,4 @@
-# Smart Content Vault — Progress Tracker
+# Limo — Progress Tracker
 
 ## 2026-06-06 02:05 UTC — Foundation Complete ✅
 
