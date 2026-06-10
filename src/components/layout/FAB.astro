@@ -1,6 +1,9 @@
 ---
 import { INSTAGRAM_CATEGORIES } from '../../modules/instagram/categories'
 import { YOUTUBE_CATEGORIES } from '../../modules/youtube/categories'
+
+const instagramCategoriesJson = JSON.stringify(INSTAGRAM_CATEGORIES)
+const youtubeCategoriesJson = JSON.stringify(YOUTUBE_CATEGORIES)
 ---
 
 <div class="fixed bottom-24 lg:bottom-24 right-4 z-50 flex flex-col items-end gap-3">
@@ -45,10 +48,13 @@ import { YOUTUBE_CATEGORIES } from '../../modules/youtube/categories'
   </div>
 </div>
 
-<script define:vars={{ instagramCategories: INSTAGRAM_CATEGORIES, youtubeCategories: YOUTUBE_CATEGORIES }}>
+<div id="cat-data" data-instagram={instagramCategoriesJson} data-youtube={youtubeCategoriesJson} hidden></div>
+
+<script>
+  const dataEl = document.getElementById('cat-data')!
   const CATEGORY_MAP: Record<string, Array<{id: string; label: string}>> = {
-    instagram: instagramCategories,
-    youtube: youtubeCategories,
+    instagram: JSON.parse(dataEl.dataset.instagram!),
+    youtube: JSON.parse(dataEl.dataset.youtube!),
   }
 
   const toast = document.getElementById('toast')
