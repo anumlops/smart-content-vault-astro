@@ -21,10 +21,15 @@ export interface Props {
           <div class={`w-2.5 h-2.5 rounded-full ${typeColor} ring-2 ring-surface`}></div>
           {i < Astro.props.items.length - 1 && <div class="w-px flex-1 bg-border mt-1"></div>}
         </div>
-        <a href={`/content/${item.id}`} class="flex-1 pb-3 group">
-          <p class="text-sm text-white group-hover:text-primary transition-colors">{item.title || getDomain(item.url)}</p>
-          <p class="text-xs text-text-muted mt-0.5">Saved {formatRelativeTime(item.createdAt)} · {item.contentType}</p>
-        </a>
+        <div class="flex-1 pb-3">
+          <a href={`/content/${item.id}`} class="group">
+            <p class="text-sm text-white group-hover:text-primary transition-colors">{item.title || getDomain(item.url)}</p>
+            <p class="text-xs text-text-muted mt-0.5">Saved {formatRelativeTime(item.createdAt)} · {item.contentType}</p>
+          </a>
+          <a href={item.url} target="_blank" rel="noopener noreferrer" class="inline-block mt-1 text-xs font-medium text-primary hover:text-primary-hover underline underline-offset-2">
+            Click Here
+          </a>
+        </div>
       </div>
     )
   })}

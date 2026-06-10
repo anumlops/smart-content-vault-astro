@@ -92,7 +92,8 @@ function init() {
                       ${CATEGORIES.map((c) => `
                         <button class="cat-btn-item px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${item.category === c.id ? 'bg-primary text-white border-primary' : 'bg-surface text-text-muted border-border hover:text-white'}" data-id="${item.id}" data-value="${c.id}">${c.label}</button>
                       `).join('')}
-                      <span class="text-xs text-text-dim ml-auto">${new Date(item.createdAt).toLocaleDateString()}</span>
+                      <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-xs font-medium text-primary hover:text-primary-hover underline underline-offset-2 ml-auto">Click Here</a>
+                      <span class="text-xs text-text-dim">${new Date(item.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>

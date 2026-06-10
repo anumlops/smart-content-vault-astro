@@ -50,31 +50,33 @@ try {
             {group.items.map((item, i) => {
               const typeColor = getContentTypeColor(item.contentType)
               return (
-                <a
-                  href={`/content/${item.id}`}
-                  class="flex items-center gap-4 p-3 rounded-lg hover:bg-surface-muted/50 transition-colors group"
-                >
+                <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-surface-muted/50 transition-colors group">
                   <div class={`w-2 h-2 rounded-full ${typeColor} shrink-0`}></div>
                   <div class="flex-1 min-w-0">
-                    <p class="text-sm text-white truncate group-hover:text-primary transition-colors">
-                      {item.title || getDomain(item.url)}
-                    </p>
-                    <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
-                      <span>{formatRelativeTime(item.createdAt)}</span>
-                      <span>·</span>
-                      <span class={typeColor}>{item.contentType}</span>
-                      {item.category && (
-                        <>
-                          <span>·</span>
-                          <span>{item.category}</span>
-                        </>
-                      )}
-                    </div>
+                    <a href={`/content/${item.id}`}>
+                      <p class="text-sm text-white truncate group-hover:text-primary transition-colors">
+                        {item.title || getDomain(item.url)}
+                      </p>
+                      <div class="flex items-center gap-2 text-xs text-text-muted mt-0.5">
+                        <span>{formatRelativeTime(item.createdAt)}</span>
+                        <span>·</span>
+                        <span class={typeColor}>{item.contentType}</span>
+                        {item.category && (
+                          <>
+                            <span>·</span>
+                            <span>{item.category}</span>
+                          </>
+                        )}
+                      </div>
+                    </a>
+                    <a href={item.url} target="_blank" rel="noopener noreferrer" class="inline-block mt-1 text-xs font-medium text-primary hover:text-primary-hover underline underline-offset-2">
+                      Click Here
+                    </a>
                   </div>
-                  <svg class="w-4 h-4 text-text-dim group-hover:text-text-muted transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg class="w-4 h-4 text-text-dim group-hover:text-text-muted transition-colors shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M9 5l7 7-7 7" />
                   </svg>
-                </a>
+                </div>
               )
             })}
           </div>
