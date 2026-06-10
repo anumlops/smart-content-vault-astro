@@ -12,19 +12,18 @@ function extractMetaContent(html: string, property: string): string {
   return decodeHtmlEntities(html.substring(start, end))
 }
 
-function extractLinkHref(html: string, rel: string): string {
-  const relIdx = html.indexOf(`rel="` + rel + `"`)
-  if (relIdx === -1) return ''
-  const hrefIdx = html.indexOf(`href="`, relIdx)
-  if (hrefIdx === -1) return ''
-  const start = hrefIdx + 6
-  const end = html.indexOf(`"`, start)
-  if (end === -1) return ''
-  return html.substring(start, end)
+function isValidImageUrl(s: string): boolean {
+  if (!s) return false
+  try {
+    const u = new URL(s)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 async function fetchInstagramOG(url: string) {
-  const empty = { ogTitle: '', ogDescription: '', ogImage: '', ogUrl: '', canonicalUrl: '', htmlSize: 0 }
+  const empty = { title: '', description: '', thumbnail: '', url: '', htmlSize: 0 }
 
   try {
     const controller = new AbortController()
@@ -53,12 +52,16 @@ async function fetchInstagramOG(url: string) {
     const html = await response.text()
     if (!html) return empty
 
+    const thumbnail = extractMetaContent(html, 'og:image')
+    const title = extractMetaContent(html, 'og:title')
+    const description = extractMetaContent(html, 'og:description')
+    const ogUrl = extractMetaContent(html, 'og:url') || url
+
     return {
-      ogTitle: extractMetaContent(html, 'og:title'),
-      ogDescription: extractMetaContent(html, 'og:description'),
-      ogImage: extractMetaContent(html, 'og:image'),
-      ogUrl: extractMetaContent(html, 'og:url') || url,
-      canonicalUrl: extractLinkHref(html, 'canonical'),
+      title,
+      description,
+      thumbnail: isValidImageUrl(thumbnail) ? thumbnail : '',
+      url: ogUrl,
       htmlSize: html.length,
     }
   } catch {
@@ -101,12 +104,11 @@ export const POST: APIRoute = async ({ request }) => {
       JSON.stringify({
         success: true,
         data: {
+          platform: 'instagram',
           url,
-          ogTitle: og.ogTitle,
-          ogDescription: og.ogDescription,
-          ogImage: og.ogImage,
-          ogUrl: og.ogUrl,
-          canonicalUrl: og.canonicalUrl,
+          title: og.title,
+          description: og.description,
+          thumbnail: og.thumbnail,
           extractedAt: new Date().toISOString(),
         },
       }),

@@ -169,21 +169,21 @@ async function run() {
       el.style.color = has ? '#22c55e' : '#ef4444'
     }
 
-    setField('rTitle', d.ogTitle)
-    setField('rDescription', d.ogDescription)
-    setField('rImage', d.ogImage)
-    setField('rOgUrl', d.ogUrl || d.url)
-    setField('rCanonical', d.canonicalUrl || '(none)')
+    setField('rTitle', d.title)
+    setField('rDescription', d.description)
+    setField('rImage', d.thumbnail)
+    setField('rOgUrl', d.url)
+    setField('rCanonical', '(not included in this output format)')
 
-    setIcon('iconTitle', !!d.ogTitle)
-    setIcon('iconDesc', !!d.ogDescription)
-    setIcon('iconImage', !!d.ogImage)
+    setIcon('iconTitle', !!d.title)
+    setIcon('iconDesc', !!d.description)
+    setIcon('iconImage', !!d.thumbnail)
     setIcon('iconUrl', true)
-    setIcon('iconCanonical', !!d.canonicalUrl)
+    setIcon('iconCanonical', false)
 
     const thumbWrap = document.getElementById('rThumbnailWrap')
-    if (d.ogImage) {
-      document.getElementById('rThumbnail').src = d.ogImage
+    if (d.thumbnail) {
+      document.getElementById('rThumbnail').src = d.thumbnail
       thumbWrap.classList.remove('hidden')
     } else {
       thumbWrap.classList.add('hidden')
