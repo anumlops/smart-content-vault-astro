@@ -4,6 +4,7 @@ import { processContent } from '../../../lib/processing'
 import { enrichContent } from '../../../lib/enrich'
 import { verifySession } from '../../../lib/auth'
 import { INSTAGRAM_CATEGORIES } from '../../../modules/instagram/categories'
+import { YOUTUBE_CATEGORIES } from '../../../modules/youtube/categories'
 
 export const POST: APIRoute = async ({ request, cookies }) => {
   const session = cookies.get('session')?.value
@@ -84,11 +85,17 @@ export const POST: APIRoute = async ({ request, cookies }) => {
 
     await enrichContent(content.id, processed.originalUrl).catch(() => {})
 
-    const responseData: any = { id: content.id }
+    const responseData: any = { id: content.id, contentType: processed.contentType }
 
     if (processed.contentType === 'instagram') {
       responseData.category = finalCategory
       responseData.availableCategories = INSTAGRAM_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))
+      responseData.thumbnail = processed.thumbnailUrl
+      responseData.title = processed.title
+      responseData.description = processed.description
+    } else if (processed.contentType === 'youtube') {
+      responseData.category = finalCategory
+      responseData.availableCategories = YOUTUBE_CATEGORIES.map((c) => ({ id: c.id, label: c.label }))
       responseData.thumbnail = processed.thumbnailUrl
       responseData.title = processed.title
       responseData.description = processed.description

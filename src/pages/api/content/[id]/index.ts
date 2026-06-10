@@ -60,6 +60,43 @@ export const GET: APIRoute = async ({ params, cookies }) => {
   }
 }
 
+export const PATCH: APIRoute = async ({ params, request, cookies }) => {
+  const session = cookies.get('session')?.value
+  if (!session) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  const payload = verifySession(session)
+  if (!payload) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+  }
+
+  const { id } = params
+
+  try {
+    const body = await request.json()
+    const category = body.category?.toString().trim()
+
+    if (!category) {
+      return new Response(JSON.stringify({ error: 'Category is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    const existing = await prisma.savedContent.findUnique({ where: { id } })
+    if (!existing || existing.userId !== payload.userId) {
+      return new Response(JSON.stringify({ error: 'Not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } })
+    }
+
+    await prisma.savedContent.update({
+      where: { id },
+      data: { category },
+    })
+
+    return new Response(JSON.stringify({ id, category }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+  } catch {
+    return new Response(JSON.stringify({ error: 'Update failed' }), { status: 500, headers: { 'Content-Type': 'application/json' } })
+  }
+}
+
 export const DELETE: APIRoute = async ({ params, cookies }) => {
   const session = cookies.get('session')?.value
   if (!session) {

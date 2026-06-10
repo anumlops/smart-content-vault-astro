@@ -1,3 +1,11 @@
+---
+import { INSTAGRAM_CATEGORIES } from '../../modules/instagram/categories'
+import { YOUTUBE_CATEGORIES } from '../../modules/youtube/categories'
+
+const instagramCategoriesJson = JSON.stringify(INSTAGRAM_CATEGORIES)
+const youtubeCategoriesJson = JSON.stringify(YOUTUBE_CATEGORIES)
+---
+
 <div class="fixed bottom-24 lg:bottom-24 right-4 z-50 flex flex-col items-end gap-3">
   <button
     id="lightning-save"
@@ -23,9 +31,34 @@
 
 <div id="toast" class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all duration-300 translate-x-[120%] opacity-0"></div>
 
+<div id="category-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-surface border border-border rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+    <div id="modal-thumb-wrap" class="hidden h-40 bg-surface-muted overflow-hidden">
+      <img id="modal-thumb" class="w-full h-full object-cover" alt="" />
+    </div>
+    <div class="p-5">
+      <h3 id="modal-title" class="text-base font-semibold text-white truncate mb-4"></h3>
+      <p class="text-xs text-text-dim mb-3">Pick a category:</p>
+      <div id="modal-categories" class="flex flex-wrap gap-2 mb-5"></div>
+      <div class="flex gap-2">
+        <button id="modal-skip" class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium border border-border text-text-muted hover:text-white bg-surface-muted hover:bg-surface-elevated transition-colors">Skip</button>
+        <button id="modal-save" class="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium bg-primary hover:bg-primary-hover text-white transition-colors disabled:opacity-50" disabled>Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+  const CATEGORY_MAP: Record<string, Array<{id: string; label: string}>> = {
+    instagram: JSON.parse({instagramCategoriesJson}),
+    youtube: JSON.parse({youtubeCategoriesJson}),
+  }
+
   const toast = document.getElementById('toast')
   let toastTimeout: any
+  let pendingContentId: string | null = null
+  let selectedCategory: string | null = null
+  let selectedContentType: string | null = null
 
   function showToast(message: string, type: 'success' | 'error') {
     clearTimeout(toastTimeout)
@@ -38,6 +71,97 @@
       toast!.classList.add('translate-x-[120%]', 'opacity-0')
     }, 3000)
   }
+
+  function showModal(data: any) {
+    pendingContentId = data.id
+    selectedContentType = data.contentType
+    selectedCategory = null
+
+    const titleEl = document.getElementById('modal-title')!
+    titleEl.textContent = data.title || 'Untitled'
+
+    const thumbWrap = document.getElementById('modal-thumb-wrap')!
+    const thumbImg = document.getElementById('modal-thumb') as HTMLImageElement
+    if (data.thumbnail) {
+      thumbImg.src = data.thumbnail
+      thumbWrap.classList.remove('hidden')
+    } else {
+      thumbWrap.classList.add('hidden')
+    }
+
+    const cats = CATEGORY_MAP[data.contentType] || []
+    const container = document.getElementById('modal-categories')!
+    container.innerHTML = cats.map((c) =>
+      `<button class="cat-opt px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-surface text-text-muted border-border hover:text-white" data-id="${c.id}">${c.label}</button>`
+    ).join('')
+
+    container.querySelectorAll('.cat-opt').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        selectedCategory = (btn as HTMLElement).dataset.id!
+        container.querySelectorAll('.cat-opt').forEach((b) => {
+          const el = b as HTMLElement
+          el.className = el.dataset.id === selectedCategory
+            ? 'cat-opt px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-primary text-white border-primary'
+            : 'cat-opt px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors bg-surface text-text-muted border-border hover:text-white'
+        })
+        const saveBtn = document.getElementById('modal-save') as HTMLButtonElement
+        saveBtn.disabled = false
+      })
+    })
+
+    document.getElementById('category-modal')!.classList.remove('hidden')
+  }
+
+  function closeModal() {
+    document.getElementById('category-modal')!.classList.add('hidden')
+    pendingContentId = null
+    selectedCategory = null
+  }
+
+  async function applyCategory() {
+    if (!pendingContentId || !selectedCategory) return
+
+    const saveBtn = document.getElementById('modal-save') as HTMLButtonElement
+    saveBtn.disabled = true
+    saveBtn.textContent = 'Saving...'
+
+    try {
+      const res = await fetch(`/api/content/${pendingContentId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: selectedCategory }),
+      })
+
+      if (!res.ok) {
+        showToast('Failed to save category', 'error')
+        return
+      }
+
+      const id = pendingContentId
+      closeModal()
+      showToast('Saved with category!', 'success')
+      window.location.href = `/content/${id}`
+    } catch {
+      showToast('Failed to save category', 'error')
+      saveBtn.disabled = false
+      saveBtn.textContent = 'Save'
+    }
+  }
+
+  document.getElementById('modal-save')?.addEventListener('click', applyCategory)
+  document.getElementById('modal-skip')?.addEventListener('click', () => {
+    const id = pendingContentId
+    closeModal()
+    window.location.href = `/content/${id}`
+  })
+
+  document.getElementById('category-modal')?.addEventListener('click', (e) => {
+    if ((e.target as HTMLElement).id === 'category-modal') {
+      const id = pendingContentId
+      closeModal()
+      if (id) window.location.href = `/content/${id}`
+    }
+  })
 
   document.getElementById('lightning-save')?.addEventListener('click', async () => {
     const btn = document.getElementById('lightning-save') as HTMLButtonElement
@@ -78,10 +202,17 @@
       }
 
       const data = await res.json()
-      showToast('Saved successfully!', 'success')
-      btn.disabled = false
-      btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
-      window.location.href = `/content/${data.id}`
+
+      if (data.availableCategories?.length > 0) {
+        showModal(data)
+        btn.disabled = false
+        btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
+      } else {
+        showToast('Saved successfully!', 'success')
+        btn.disabled = false
+        btn.innerHTML = '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg><span class="hidden sm:inline text-sm font-medium">Quick Save</span>'
+        window.location.href = `/content/${data.id}`
+      }
     } catch {
       showToast('Could not read clipboard. Paste manually.', 'error')
       btn.disabled = false
